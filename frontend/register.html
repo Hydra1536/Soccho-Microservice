@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register - Soccho</title>
+  <script src="https://unpkg.com/htmx.org@2.0.0"></script>
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+  <link rel="stylesheet" href="static/css/main.css">
+</head>
+<body x-data="{ password: '', confirmPassword: '' }" class="bg-gradient-to-br from-indigo-500 to-purple-600 min-h-screen flex items-center justify-center p-4">
+  <div class="card max-w-md w-full p-8">
+    <h1 class="text-3xl font-bold text-center mb-8 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">Join Soccho</h1>
+    <form hx-post="/auth/register" hx-target="#result" class="space-y-6">
+      <div>
+        <label class="block text-sm font-medium mb-2">Username</label>
+        <input type="text" name="username" required class="w-full input-field">
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-2">Email</label>
+        <input type="email" name="email" required class="w-full input-field">
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-2">Password</label>
+        <input type="password" x-model="password" name="password" required class="w-full input-field" minlength="8">
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-2">Confirm Password</label>
+        <input type="password" x-model="confirmPassword" name="confirm_password" required class="w-full input-field">
+        <p x-show="password && confirmPassword && password !== confirmPassword" class="text-danger text-sm mt-1">Passwords do not match</p>
+      </div>
+      <button type="submit" class="w-full btn-primary">Create Account</button>
+    </form>
+    <div id="result" class="mt-6"></div>
+    <div class="mt-8 text-center">
+      <a href="index.html" class="text-muted hover:text-accent">Already have an account? Login</a>
+    </div>
+  </div>
+</body>
+</html>
+

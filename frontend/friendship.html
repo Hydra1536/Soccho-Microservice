@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Friendship - Soccho</title>
+  <script src="https://unpkg.com/htmx.org@2.0.0"></script>
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="static/css/main.css">
+</head>
+<body x-data="{ friendId: window.location.pathname.split('/').pop(), netBalance: 0 }" class="bg-gray-50 min-h-screen">
+  <header class="bg-white shadow-sm sticky top-0 p-4">
+    <div class="flex items-center gap-4">
+      <a href="home.html">
+        <svg class="w-8 h-8 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+      </a>
+      <div class="flex-1">
+        <h1 id="friend-name" class="text-2xl font-bold">Loading...</h1>
+        <div id="loyalty-score" class="text-sm text-muted">Loyalty: --</div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container mx-auto p-4 pt-20 pb-20">
+    <!-- Net Balance Card -->
+    <div class="card p-8 text-center mb-8">
+      <div id="friend-avatar" class="avatar mx-auto mb-4 border-4 border-accent shadow-lg"></div>
+      <div class="balance-chip balance-positive text-3xl font-bold mb-2" id="net-balance-chip">+$0</div>
+      <p class="text-muted">Net balance with this friend</p>
+    </div>
+
+    <!-- Give Money Form -->
+    <div class="card p-6 mb-8">
+      <h3 class="text-xl font-bold mb-6">Send Money</h3>
+      <form hx-post="/transactions/create" hx-target="#transaction-result" class="space-y-4">
+        <input type="hidden" name="friend_id" :value="friendId">
+        <div>
+          <label class="block text-sm font-medium mb-2">Amount ($)</label>
+          <input type="number" name="amount" step="0.01" min="0.01" required class="w-full input-field text-2xl text-right">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-2">Due Date (optional)</label>
+          <input type="date" name="due_date" class="w-full input-field">
+        </div>
+        <button type="submit" class="w-full btn-primary py-4 text-lg">Send Request</button>
+      </form>
+      <div id="transaction-result"></div>
+    </div>
+
+    <!-- Recent Transactions -->
+    <div class="card p-6">
+      <h3 class="text-xl font-bold mb-6">Recent Transactions</h3>
+      <div id="transactions-list" class="space-y-4">
+        <div class="skeleton h-16 rounded-xl"></div>
+        <div class="skeleton h-16 rounded-xl"></div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    htmx.onLoad(() => {
+      // Load transaction-driven friendship data
+      htmx.ajax('GET', `/transactions/balance/${friendId}`, {target: '#net-balance-chip'});
+      htmx.ajax('GET', `/transactions/list/${friendId}`, {target: '#transactions-list'});
+    });
+  </script>
+</body>
+</html>
+

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile - Soccho</title>
+  <script src="https://unpkg.com/htmx.org@2.0.0"></script>
+  <link rel="stylesheet" href="static/css/main.css">
+  <link rel="stylesheet" href="static/css/mobile.css">
+</head>
+<body class="bg-gradient-to-br from-gray-50 to-blue-50 min-h-screen">
+  <header class="bg-white shadow-sm sticky top-0 z-50 p-4">
+    <h1 class="text-xl font-bold">Profile</h1>
+  </header>
+
+  <main class="container mx-auto p-4 pt-20 pb-20">
+    <section class="card p-6 mb-6">
+      <div class="flex items-center gap-4">
+        <div class="w-16 h-16 rounded-full bg-primary text-white flex items-center justify-center text-xl font-bold">U</div>
+        <div>
+          <h2 class="text-lg font-semibold">Your Account</h2>
+          <p class="text-muted">Account and security overview</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="card p-6 mb-6">
+      <h3 class="text-lg font-semibold mb-4">Security</h3>
+      <button class="btn-secondary w-full mb-3">Change Password</button>
+      <button class="btn-secondary w-full">Manage Sessions</button>
+    </section>
+
+    <section class="card p-6">
+      <h3 class="text-lg font-semibold mb-4">Stats</h3>
+      <div id="profile-stats" hx-get="/social/friends" hx-trigger="load" class="text-muted">Loading stats...</div>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Find Friends - Soccho</title>
+  <script src="https://unpkg.com/htmx.org@2.0.0"></script>
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+  <link rel="stylesheet" href="static/css/main.css">
+  <link rel="stylesheet" href="static/css/mobile.css">
+  <link rel="stylesheet" href="static/css/animations.css">
+</head>
+<body x-data="{ searchQuery: '', recentSearches: [], showRecent: false }" class="bg-gradient-to-br from-indigo-50 to-purple-50 min-h-screen">
+  <header class="bg-white shadow-sm sticky top-0 z-50 p-4">
+    <div class="flex items-center gap-3">
+      <a href="home.html" class="p-2 rounded-xl hover:bg-gray-100">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+      </a>
+      <div class="flex-1 relative">
+        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+          </svg>
+        </div>
+        <input 
+          type="text" 
+          x-model="searchQuery"
+          hx-get="/social/search"
+          hx-trigger="keyup changed delay:300ms"
+          hx-target="#search-results"
+          hx-indicator="#loading"
+          placeholder="Search friends..."
+          class="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-accent focus:border-transparent"
+        >
+        <div id="loading" class="htmx-indicator absolute right-3 inset-y-0 flex items-center">
+          <div class="skeleton w-4 h-4 rounded-full"></div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container mx-auto p-4 pt-20 pb-20">
+    <!-- Recent Searches -->
+    <div x-show="showRecent" class="card p-6 mb-6">
+      <h3 class="text-lg font-bold mb-4">Recent Searches</h3>
+      <div class="flex flex-wrap gap-2" id="recent-searches">
+        <!-- Load recent via HTMX -->
+      </div>
+    </div>
+
+    <!-- Search Results -->
+    <div class="card p-6">
+      <div class="flex items-center justify-between mb-6">
+        <h3 class="text-xl font-bold" x-text="searchQuery ? `Results for \"${searchQuery}\"` : 'Suggested Friends'"></h3>
+        <button class="text-muted hover:text-gray-700" @click="showRecent = !showRecent">
+          <svg x-show="!showRecent" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+          </svg>
+        </button>
+      </div>
+      <div id="search-results" class="space-y-4">
+        <!-- Results load here -->
+        <div class="skeleton h-20 rounded-xl"></div>
+        <div class="skeleton h-20 rounded-xl"></div>
+        <div class="skeleton h-20 rounded-xl"></div>
+      </div>
+      <div id="load-more" class="text-center mt-8">
+        <button hx-get="/social/search?cursor=next" hx-target="#search-results" hx-swap="beforeend" class="btn-secondary">
+          Show More
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Bottom Nav -->
+  <nav class="bottom-nav">
+    <a href="home.html" class="flex flex-col items-center p-2 text-accent">
+      <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+        <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/>
+      </svg>
+      <span class="text-xs mt-1">Home</span>
+    </a>
+    <a href="find-friends.html" class="flex flex-col items-center p-2 text-accent relative">
+      <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+        <path d="M9 9a2 2 0 114 0 2 2 0 01-4 0z"/>
+        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a4 4 0 00-3.446 6.032l-1.261 1.26a4 4 0 103.69 6.415 4 4 0 00.611-6.976l1.262-1.26a4 4 0 10-3.69-6.415l1.261-1.261A4 4 0 1011 5z"/>
+      </svg>
+      <span class="text-xs mt-1">Friends</span>
+    </a>
+    <a href="profile.html" class="flex flex-col items-center p-2 text-gray-500">
+      <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z"/>
+      </svg>
+      <span class="text-xs mt-1">Profile</span>
+    </a>
+  </nav>
+
+  <script>
+    // Load recent searches on focus
+    document.querySelector('input[type="text"]').addEventListener('focus', () => {
+      htmx.ajax('GET', '/social/search-history', {target: '#recent-searches'});
+    });
+  </script>
+</body>
+</html>
+

@@ -1,0 +1,167 @@
+/* Soccho Design System - PRD 15.1 Tokens */
+:root {
+  --primary: #1E3A5F;
+  --accent: #2563EB;
+  --danger: #DC2626;
+  --success: #059669;
+  --surface: #FFFFFF;
+  --background: #F0F2F5;
+  --text-primary: #111827;
+  --text-muted: #6B7280;
+  --border: #E5E7EB;
+  --shadow: 0 2px 12px rgba(0,0,0,0.08);
+  --radius-card: 12px;
+  --radius-input: 8px;
+  --radius-avatar: 20px;
+  --transition: all 200ms ease-out;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--background);
+  color: var(--text-primary);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* 3D Cards */
+.card {
+  background: var(--surface);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  transition: var(--transition);
+  position: relative;
+  overflow: hidden;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+}
+
+/* Balance Chips */
+.balance-chip {
+  padding: 8px 16px;
+  border-radius: 9999px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  min-width: 80px;
+  text-align: center;
+}
+
+.balance-positive {
+  background: linear-gradient(135deg, var(--success), #10b981);
+  color: white;
+}
+
+.balance-negative {
+  background: linear-gradient(135deg, var(--danger), #ef4444);
+  color: white;
+}
+
+/* Forms */
+input, button {
+  transition: var(--transition);
+}
+
+input:focus {
+  outline: none;
+  ring: 2px solid var(--accent);
+  border-color: var(--accent);
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  font-weight: 600;
+}
+
+button:hover {
+  transform: scale(1.02);
+}
+
+/* Mobile First */
+@media (max-width: 768px) {
+  .container {
+    padding: 1rem;
+  }
+  
+  .bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    border-top: 1px solid var(--border);
+    height: 72px;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    z-index: 1000;
+  }
+}
+
+/* Animations PRD 15.3 */
+@keyframes slideIn {
+  from { transform: translateX(-100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.drawer {
+  animation: slideIn 200ms ease-out;
+}
+
+/* Notification Drawer */
+.notification-drawer {
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
+  width: 75vw;
+  max-width: 400px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  z-index: 2000;
+  transform: translateX(-100%);
+  transition: var(--transition);
+}
+
+.notification-drawer.open {
+  transform: translateX(0);
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 1999;
+}
+
+/* Skeleton Loader */
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Avatars */
+.avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-avatar);
+  border: 3px solid var(--border);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+  object-fit: cover;
+}
+

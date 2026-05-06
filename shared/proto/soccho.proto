@@ -1,0 +1,30 @@
+syntax = "proto3";
+package soccho;
+
+service AuthService {
+  rpc ValidateToken(TokenRequest) returns (TokenResponse);
+}
+
+message TokenRequest {
+  string token = 1;
+}
+
+message TokenResponse {
+  string user_id = 1;
+  bool valid = 2;
+}
+
+service NotificationService {
+  rpc SendNotification(NotificationRequest) returns (NotificationResponse);
+}
+
+message NotificationRequest {
+  string recipient_id = 1;
+  string type = 2;
+  string payload = 3;
+}
+
+message NotificationResponse {
+  bool delivered = 1;
+}
+

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Soccho - Home</title>
+  <script src="https://unpkg.com/htmx.org@2.0.0"></script>
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="static/css/main.css">
+  <link rel="stylesheet" href="static/css/mobile.css">
+  <link rel="stylesheet" href="static/css/animations.css">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body x-data="homeApp()" class="bg-gradient-to-br from-indigo-50 to-purple-50 min-h-screen">
+  <!-- Top Bar -->
+  <header class="bg-white shadow-sm sticky top-0 z-50 p-4 flex items-center justify-between">
+    <h1 class="text-xl font-bold text-gray-900">Soccho</h1>
+    <div class="flex items-center gap-4">
+      <button @click="toggleDrawer()" class="relative p-2 rounded-xl hover:bg-gray-100 transition-all">
+        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"/>
+        </svg>
+        <span x-show="notificationCount > 0" x-text="notificationCount" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">0</span>
+      </button>
+      <div class="w-10 h-10 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg">
+        <span class="text-white font-semibold">AB</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Notification Drawer -->
+  <div x-show="drawerOpen" x-transition:enter="drawer-enter" x-transition:enter-start="notification-drawer" class="notification-drawer">
+    <div class="p-4 border-b">
+      <div class="flex items-center justify-between">
+        <h2 class="text-lg font-bold">Notifications</h2>
+        <button @click="toggleDrawer()" class="p-2 rounded-xl hover:bg-gray-100">×</button>
+      </div>
+    </div>
+    <div id="notifications-list" class="p-4 space-y-4 overflow-y-auto h-[calc(100vh-120px)]">
+      <!-- Notifications load here via HTMX -->
+    </div>
+  </div>
+
+  <!-- Backdrop -->
+  <div x-show="drawerOpen" x-transition class="backdrop" @click="toggleDrawer()"></div>
+
+  <!-- Main Content -->
+  <main class="container mx-auto p-4 pt-20 pb-20">
+    <!-- Charts Section -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+      <div class="card p-6">
+        <h3 class="text-lg font-semibold mb-4">Monthly Summary</h3>
+        <canvas id="monthlyChart" height="200"></canvas>
+      </div>
+      <div class="card p-6">
+        <h3 class="text-lg font-semibold mb-4">Net Balance</h3>
+        <div class="text-4xl font-bold text-center text-green-600" id="netBalance">$0</div>
+        <p class="text-center text-muted text-sm mt-2">Total owed to you</p>
+      </div>
+    </div>
+
+    <!-- Friends List -->
+    <div class="card p-6">
+      <div class="flex items-center justify-between mb-6">
+        <h3 class="text-xl font-bold">Friends</h3>
+        <a href="find-friends.html" class="text-accent font-semibold hover:underline">Find Friends →</a>
+      </div>
+      <div id="friends-list" class="space-y-4">
+        <!-- Friends load here -->
+        <div class="skeleton h-16 rounded-xl"></div>
+        <div class="skeleton h-16 rounded-xl"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Mobile Bottom Nav -->
+  <nav class="bottom-nav">
+    <a href="home.html" class="flex flex-col items-center p-2 text-accent">
+      <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+        <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/>
+      </svg>
+      <span class="text-xs mt-1">Home</span>
+    </a>
+    <a href="find-friends.html" class="flex flex-col items-center p-2 text-gray-500">
+      <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+        <path d="M9 9a2 2 0 114 0 2 2 0 01-4 0z"/>
+        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a4 4 0 00-3.446 6.032l-1.261 1.26a4 4 0 103.69 6.415 4 4 0 00.611-6.976l1.262-1.26a4 4 0 10-3.69-6.415l1.261-1.261A4 4 0 1011 5z"/>
+      </svg>
+      <span class="text-xs mt-1">Friends</span>
+    </a>
+    <a href="profile.html" class="flex flex-col items-center p-2 text-gray-500">
+      <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z"/>
+      </svg>
+      <span class="text-xs mt-1">Profile</span>
+    </a>
+  </nav>
+
+  <script>
+    function homeApp() {
+      return {
+        drawerOpen: false,
+        notificationCount: 0,
+        toggleDrawer() {
+          this.drawerOpen = !this.drawerOpen;
+        },
+        init() {
+          // Load notifications and friends from gateway routes.
+          fetch('/notifications/unread-count')
+            .then((r) => r.json())
+            .then((data) => {
+              this.notificationCount = Number(data.count || 0);
+            })
+            .catch(() => {});
+
+          htmx.ajax('GET', '/social/friends', {target: '#friends-list', swap: 'innerHTML'});
+          
+          // Charts
+          const ctx = document.getElementById('monthlyChart').getContext('2d');
+          new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+              labels: ['Given', 'Lent', 'Received'],
+              datasets: [{
+                data: [300, 150, 450],
+                backgroundColor: ['#059669', '#DC2626', '#10B981']
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: { legend: { position: 'bottom' } }
+            }
+          });
+        }
+      }
+    }
+  </script>
+</body>
+</html>
+

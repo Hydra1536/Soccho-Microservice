@@ -1,0 +1,53 @@
+/* PRD 15.3 Animations - CSS only */
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.card-enter {
+  animation: fadeInUp 300ms ease-out;
+}
+
+.balance-number {
+  animation: countUp 600ms ease-out;
+}
+
+.due-reminder {
+  animation: pulse 2s infinite;
+}
+
+.loading {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Page transitions */
+.page-enter {
+  animation: fadeInUp 200ms ease-out;
+}
+
+.drawer-enter {
+  animation: slideInLeft 200ms ease-out;
+}
+
+@keyframes slideInLeft {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+

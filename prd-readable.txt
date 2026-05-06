@@ -1,0 +1,927 @@
+﻿
+--- Page stream 1 ---
+# Soccho - Full Project Report 
+ 
+1. Framework Assignment (Every Framework, Best-Fit) 
+This is the definitive mapping of every framework to the service where it fits best. 
+Service 
+Framework 
+Why 
+API Gateway 
+FastAPI 
+Async-native, fastest for request routing/validation, native gRPC client support, OpenAPI docs auto-generated 
+Auth service 
+Django Ninja 
+Lightweight Django + type-safe API, perfect for OTP/JWT flows, uses Django ORM without DRF overhead 
+Social service 
+Django REST Framework (DRF ViewSets) 
+Rich serializer ecosystem, built-in pagination, best for CRUD-heavy friend management 
+Transaction service 
+Django REST Framework (DRF ViewSets) 
+Same reason - ledger operations are CRUD with business logic; ViewSets + select_for_update() for race safety 
+Notification service 
+Django Channels 
+WebSocket-native; Redis channel layer integration is first-class; Channels is the only Django-ecosystem WS solution 
+Graphene (GraphQL) 
+Social + Transaction services 
+Graphene runs as a schema layer on top of DRF. Social's friend list and Transaction's balance summary are the two endpoints complex enough to benefit from GraphQL field selection - clients fetch exactly what they need 
+Admin panel 
+Django default admin 
+Minimal setup, secure by default, sufficient for user CRUD 
+Frontend 
+Pure HTMX + Alpine.js 
+No backend server needed on the frontend; HTMX handles all HTTP interactions declaratively; Alpine.js handles local state (drawers, toggles); deployed as static files on Vercel 
+FastAPI serves as the single entry point (gateway). It validates JWTs, enforces rate limits, and routes to the correct backend service via gRPC or internal HTTP. This means the frontend only ever talks to one URL 
+ 2. Detailed Feature  Requirement Analysis 
+
+--- Page stream 9 ---
+ 
+### Authentication Service 
+- Email + password login with JWT (access: 1h, refresh: 12h, session expires 12h) 
+- Google OAuth2 (via `social-django`) - stores name + email from Google 
+- Registration: unique username, valid email, password, confirm password -> OTP via email -> JWT 
+- Forgot password: email -> OTP -> reset -> JWT 
+- OTP: 6-digit, 10-minute expiry, sent via Gmail SMTP (free) using Django's email backend 
+- Throttling: 100 login attempts/hour per IP -> 1-hour block (Redis-backed) 
+- Change password: requires OTP re-verification 
+ 
+### Social Service 
+- Add friends via search (fuzzy using `django-fuzzywuzzy` or `pg_trgm` PostgreSQL extension - free) 
+- Friend suggestion based on Loyalty Score: `(total_given - total_lent) / total_transactions` 
+- Cursor pagination: 10 friends per page, "Show More" fetches next 10 
+- Friend request system: send -> pending -> accept/reject 
+- Loyalty score visible only to the user themselves, not friends 
+ 
+### Transaction Service 
+- Ledger-based: every give/lend is a transaction entry 
+- Net balance per friendship: auto-calculated as `SUM(given) - SUM(received)` 
+- Negative net = you owe; Positive net = friend owes 
+- Optional due date per transaction 
+- Transactions auto-deleted(soft delete) after 30 days from user history but exist in DB for later audit(Celery beat) 
+- Confirmation flow: lender logs transaction -> borrower notified -> borrower confirms/denies 
+- Idempotency key on transaction creation to prevent duplicates 
+ 
+### Notification Service 
+- WebSocket via Django Channels + Redis channel layer 
+- 3 notification types: 
+ 1. Pending lend confirmation (with Agree/Disagree buttons) 
+ 2. Payment received acknowledgment 
+ 3. Due date reminder (repeats on every login until cleared) 
+- Offline: service worker caches notifications in IndexedDB; sync on reconnect 
+ 
+### Admin Panel 
+- Admin can: create, read, delete users 
+- All financial data stored AES-256 encrypted in DB (using `django-cryptography`) 
+- Admin sees only: username, loyalty score, friend list 
+ 
+### PWA / Offline Support 
+- Service Worker caches: friend list, notifications, home page charts 
+
+--- Page stream 11 ---
+- Background sync for transaction submissions when offline 
+- IndexedDB for local notification queue 
+ 
+--- 
+ 
+ 3. Detailed System Design 
+ 
+### Architecture Pattern 
+**Event-Driven + Social Graph + Mission-Critical** 
+- Event-Driven: transaction events emit to Redis pub/sub -> notification service consumes 
+- Social Graph: friend relationships modeled as a graph in PostgreSQL (adjacency list, no separate graph DB needed at this scale) 
+- Mission-Critical: Circuit breaker pattern via `pybreaker` library on all inter-service calls; Mutex via Redis `SET NX` for idempotent operations; Optimistic Locking via `select_for_update()` on balance updates 
+ 
+### Services Breakdown 
+ 
+| Service | Framework | Port | 
+|---|---|---|---| 
+| Auth | Django + DRF | 8001 | 
+| Social | Django + DRF | 8002 | 
+| Transaction | Django + DRF | 8003 | 
+| Notification | Django Channels | 8004 | 
+| Gateway/Frontend | Nginx + HTMX | - | 80/443 | 
+| Redis | Redis 7 | - | 6379 | 
+ 
+Inter-service communication: grpc + Redis pub/sub (events) + direct HTTP via internal Docker network (synchronous lookups). 
+ 
+### Security Implementation 
+ 
+| Threat | Mitigation | 
+|---|---| 
+| User enumeration | Generic error messages on auth failures | 
+| BOLA/IDOR | Object-level permission check on every ViewSet action | 
+| Brute force | Redis-backed rate limiter: 100/hr -> 1hr block | 
+| Mass assignment | DRF serializers with explicit `fields` - no `__all__` | 
+| SQL injection | Django ORM only, parameterized queries | 
+| Excessive data exposure | Serializers return only necessary fields | 
+| Sensitive errors | `DEBUG=False` in prod; custom error handlers | 
+| Encryption | AES-256 for financial fields via `django-cryptography` | 
+| Secrets | `.env` files + Render environment variables | 
+| CORS | Whitelist only frontend domain | 
+
+--- Page stream 13 ---
+| Clickjacking | `X-Frame-Options: DENY` header | 
+| SSRF | No user-supplied URLs fetched server-side | 
+| Race conditions | `select_for_update()` + Redis `SET NX` mutex | 
+| Session hijacking | Short-lived JWTs + refresh token rotation | 
+| DoS/DDoS | Nginx rate limiting + Render's DDoS protection | 
+| Docker security | Non-root user in Dockerfile, minimal base image (`python:3.12-slim`) | 
+| Dependency scanning | `pip audit` in CI | 
+| Log rotation | Configured in Django logging + Render log drain | 
+| Security headers | `django-csp` + `django-axes` | 
+ 
+### Performance & Scalability 
+ 
+- Cursor pagination (keyset) on all list endpoints - no OFFSET 
+- `select_related()` and `prefetch_related()` to minimize DB hits 
+- Redis caching: friend list (TTL 5min), loyalty scores (TTL 15min) 
+- `__slots__` on Python dataclasses for serialization helpers 
+- List comprehensions over loops in all utility functions 
+- Idempotency keys stored in Redis (TTL 24h) 
+- Circuit breaker (`pybreaker`) on notification dispatch 
+- Optimistic locking on balance update: check version field before write 
+- Try to keep the codes time complexity near O(logn) 
+ 
+ 
+--- 
+ 
+ 4. Database Design (3.5NF) 
+ 
+### auth 
+ 
+**users** 
+``` 
+id (UUID PK) 
+username (varchar, unique, indexed) 
+email_encrypted (text) -> AES-256 
+password_hash (varchar) 
+google_id (varchar, nullable, unique) 
+is_active (bool) 
+loyalty_score (decimal, computed + cached) 
+created_at (timestamptz) 
+updated_at (timestamptz) 
+``` 
+ 
+**otp_tokens** 
+``` 
+
+--- Page stream 15 ---
+id (UUID PK) 
+user_id (FK -> users) 
+token_hash (varchar) 
+purpose (enum: register/reset/change_pw) 
+expires_at (timestamptz) 
+used (bool) 
+``` 
+ 
+**refresh_tokens** 
+``` 
+id (UUID PK) 
+user_id (FK -> users) 
+token_hash (varchar) 
+expires_at (timestamptz) 
+revoked (bool) 
+``` 
+ 
+### social 
+ 
+**friendships** 
+``` 
+id (UUID PK) 
+requester_id (UUID, indexed) 
+addressee_id (UUID, indexed) 
+status (enum: pending/accepted/rejected) 
+created_at (timestamptz) 
+UNIQUE(requester_id, addressee_id) 
+``` 
+ 
+### transaction 
+ 
+**transactions** 
+``` 
+id (UUID PK) 
+giver_id (UUID, indexed) 
+receiver_id (UUID, indexed) 
+amount_encrypted (text) -> AES-256 
+due_date_encrypted (text, nullable) 
+status (enum: pending/confirmed/denied) 
+idempotency_key (varchar, unique) 
+created_at (timestamptz) 
+delete_at (timestamptz) -> 30 days after created_at 
+version (int) -> optimistic lock 
+``` 
+
+--- Page stream 17 ---
+ 
+**balances** (materialized, updated on each confirmed transaction) 
+``` 
+id (UUID PK) 
+user_a_id (UUID) 
+user_b_id (UUID) 
+net_balance_encrypted (text) -> positive = user_a is owed, negative = user_a owes 
+updated_at (timestamptz) 
+UNIQUE(user_a_id, user_b_id) with user_a < user_b enforced 
+``` 
+ 
+### notification 
+ 
+**notifications** 
+``` 
+id (UUID PK) 
+recipient_id (UUID, indexed) 
+type (enum: lend_confirm/payment_received/due_reminder) 
+payload_encrypted (text) 
+is_read (bool) 
+created_at (timestamptz) 
+``` 
+ 
+--- 
+ 
+5. gRPC Integration 
+gRPC is used for all synchronous inter-service calls where one service needs a real-time response from another. Redis pub/sub handles fire-and-forget events. 
+When gRPC is used: 
+Ǆ 
+Gateway -> Auth service: token validation on every request 
+Ǆ 
+Gateway -> Social service: friend existence check before transaction creation 
+Ǆ 
+Transaction service -> Notification service: trigger notification on transaction confirm/deny 
+Ǆ 
+Social service -> Auth service: fetch user display info (username) for friend suggestions 
+Proto file location: shared/proto/socchoproto - compiled for each service using grpcio tools. 
+Sample proto definition: 
+
+--- Page stream 19 ---
+syntax = "proto3"; 
+package soccho; 
+ 
+service AuthService { 
+ rpc ValidateToken(TokenRequest) returns (TokenResponse); 
+} 
+message TokenRequest { string token = 1; } 
+message TokenResponse { string user_id = 1; bool valid = 2; } 
+ 
+service NotificationService { 
+ rpc SendNotification(NotificationRequest) returns (NotificationResponse); 
+} 
+message NotificationRequest { 
+ string recipient_id = 1; 
+ string type = 2; 
+ string payload = 3; 
+} 
+message NotificationResponse { bool delivered = 1; } 
+ 
+Each service runs a gRPC server on an internal Render private port (not publicly exposed). The FastAPI gateway is the only gRPC client facing the outside. Internal service-to-service gRPC uses Render's private network - no TLS overhead on internal calls. 
+ 
+6. Graphene 
+Graphene is mounted as a single GraphQL endpoint in both the Social and Transaction services. It sits alongside DRF - DRF handles REST endpoints, Graphene handles the /graphql/ endpoint for richer queries. 
+Social service GraphQL use case: 
+query { 
+ friends(cursor: "...", limit: 10) { 
+ edges { node { username loyaltyScore netBalance } } 
+ pageInfo { endCursor hasNextPage } 
+ } 
+ suggestedFriends(limit: 10) { 
+ username loyaltyScore 
+ } 
+} 
+ 
+
+--- Page stream 22 ---
+Transaction service GraphQL use case: 
+query { 
+ friendshipSummary(friendId: "uuid") { 
+ netBalance 
+ totalGiven 
+ totalReceived 
+ recentTransactions { amount status dueDate createdAt } 
+ } 
+ monthlyChart { 
+ month totalGiven totalLent 
+ } 
+} 
+ 
+Graphene resolvers call the same Django ORM queries used by DRF - no duplication of business logic. The frontend calls /graphql/ via HTMX hx post with a JSON body containing the GraphQL query string. 
+ 
+7. Admin Endpoint 
+The Django admin panel is mounted at exactly /119115131318115 - this is a non-guessable path that acts as security through obscurity (combined with Django's own auth). No standard /admin/ route is registered. 
+# admin_service/urls.py 
+urlpatterns = [ 
+ path('119115131318115/', admin.site.urls), 
+] 
+ 
+Admin only sees: username, loyalty score (read-only), friend count. All financial fields (amount, due_date, balance) are stored AES-256 encrypted and display as ¯ENCRYPTED] in the admin panel - even with DB access, the admin sees cipher text. 
+ 
+8. Search History (24-hour Persistence) 
+Every search query (friend search and find-friends search) is saved to Redis with a 24-hour TTL. 
+
+--- Page stream 24 ---
+Storage key pattern: search_history{user_id} -> Redis List, max 50 entries, each entry a JSON string {¤query¤¤abir¤¤ts¤1719000000}. 
+On each search: 
+pipe = redis.pipeline() 
+pipe.lpush(f"search_history:{user_id}", json.dumps({"query": q, "ts": time.time()})) 
+pipe.ltrim(f"search_history:{user_id}", 0, 49) 
+pipe.expire(f"search_history:{user_id}", 86400) 
+pipe.execute() 
+ 
+Frontend behavior: When the search bar is focused, an HTMX request fetches the last 10 queries and shows them as a dropdown below the bar. They auto-clear after 24 hours. No DB write - Redis only. 
+ 
+9. Deployment: Render CI/CD (No Docker, No GitHub Actions) 
+Docker is removed entirely for Render deployments. Render builds Python services natively using its build system. Docker is only kept for local development (docker composeyml for local testing) - not deployed. 
+render.yaml (complete, covering all services) 
+services: 
+ - name: soccho-gateway 
+ type: web 
+ runtime: python 
+ buildCommand: pip install -r requirements.txt && python -m grpc_tools.protoc -I shared/proto --python_out=. --grpc_python_out=. shared/proto/soccho.proto 
+ startCommand: uvicorn gateway.main:app --host 0.0.0.0 --port $PORT 
+ envVars: 
+ - key: AUTH_GRPC_HOST 
+ value: soccho-auth 
+ - key: SOCIAL_GRPC_HOST 
+ value: soccho-social 
+ - key: REDIS_URL 
+ fromService: 
+ name: soccho-redis 
+ type: redis 
+ property: connectionString 
+
+--- Page stream 26 ---
+ - key: JWT_SECRET 
+ sync: false 
+ - key: ALLOWED_ORIGINS 
+ value: https://soccho.vercel.app 
+ 
+ - name: soccho-auth 
+ type: web 
+ runtime: python 
+ buildCommand: pip install -r requirements.txt && python manage.py migrate 
+ startCommand: python -m grpc_tools.protoc -I../../shared/proto ... && gunicorn auth_service.wsgi --bind 0.0.0.0:$PORT & python -m concurrent.futures... 
+ envVars: 
+ - key: DATABASE_URL 
+ fromDatabase: 
+ name: anon_chat 
+ property: connectionString 
+ - key: REDIS_URL 
+ fromService: 
+ name: soccho-redis 
+ type: redis 
+ property: connectionString 
+ - key: EMAIL_HOST_USER 
+ sync: false 
+ - key: EMAIL_HOST_PASSWORD 
+ sync: false 
+ - key: AES_SECRET_KEY 
+ sync: false 
+ 
+ - name: soccho-social 
+ type: web 
+ runtime: python 
+ buildCommand: pip install -r requirements.txt && python manage.py migrate 
+ startCommand: gunicorn social_service.wsgi --bind 0.0.0.0:$PORT 
+ envVars: 
+ - key: DATABASE_URL 
+ fromDatabase: 
+ name: anon_chat 
+ property: connectionString 
+ - key: REDIS_URL 
+ fromService: 
+ name: soccho-redis 
+ type: redis 
+ property: connectionString 
+ 
+
+--- Page stream 28 ---
+ - name: soccho-transaction 
+ type: web 
+ runtime: python 
+ buildCommand: pip install -r requirements.txt && python manage.py migrate 
+ startCommand: gunicorn transaction_service.wsgi --bind 0.0.0.0:$PORT 
+ envVars: 
+ - key: DATABASE_URL 
+ fromDatabase: 
+ name: anon_chat 
+ property: connectionString 
+ - key: REDIS_URL 
+ fromService: 
+ name: soccho-redis 
+ type: redis 
+ property: connectionString 
+ 
+ - name: soccho-notification 
+ type: web 
+ runtime: python 
+ buildCommand: pip install -r requirements.txt && python manage.py migrate 
+ startCommand: daphne -b 0.0.0.0 -p $PORT notification_service.asgi:application 
+ envVars: 
+ - key: DATABASE_URL 
+ fromDatabase: 
+ name: anon_chat 
+ property: connectionString 
+ - key: REDIS_URL 
+ fromService: 
+ name: soccho-redis 
+ type: redis 
+ property: connectionString 
+ 
+ - name: soccho-admin 
+ type: web 
+ runtime: python 
+ buildCommand: pip install -r requirements.txt && python manage.py migrate && python manage.py collectstatic --noinput 
+ startCommand: gunicorn admin_service.wsgi --bind 0.0.0.0:$PORT 
+ envVars: 
+ - key: DATABASE_URL 
+ fromDatabase: 
+ name: anon_chat 
+ property: connectionString 
+ 
+
+--- Page stream 30 ---
+ - name: soccho-celery-worker 
+ type: worker 
+ runtime: python 
+ buildCommand: pip install -r requirements.txt 
+ startCommand: celery -A transaction_service worker --loglevel=info 
+ envVars: 
+ - key: REDIS_URL 
+ fromService: 
+ name: soccho-redis 
+ type: redis 
+ property: connectionString 
+ 
+ - name: soccho-celery-beat 
+ type: worker 
+ runtime: python 
+ buildCommand: pip install -r requirements.txt 
+ startCommand: celery -A transaction_service beat --loglevel=info 
+ envVars: 
+ - key: REDIS_URL 
+ fromService: 
+ name: soccho-redis 
+ type: redis 
+ property: connectionString 
+ 
+ - name: soccho-redis 
+ type: redis 
+ plan: free 
+ maxmemoryPolicy: allkeys-lru 
+ 
+databases: 
+ - name: anon_chat 
+ plan: free 
+ 
+ 
+Render CI/CD flow: Every gitpush to main on your linked GitHub repo triggers Render to rebuild and redeploy each service independently. Each service has its own deploy pipeline - a failed notification service deploy does not block the auth service. No GitHub Actions workflow file is needed. Render handles it natively. 
+Frontend on Vercel: Push frontend/ directory to a separate Vercel project (or subdirectory deployment). Vercel auto-deploys on push with zero config for static HTML/JS. Add verceljson with a single rewrite rule to handle HTMX navigation. 
+
+--- Page stream 32 ---
+ 
+10. Scalability, Speed, Consistency, Availability  Partition Tolerance 
+CAP positioning: AP with tunable consistency 
+Soccho prioritizes Availability and Partition Tolerance. For financial balance reads, consistency is enforced at the DB layer using select_for_update() - this is the one operation where the system blocks briefly to ensure correctness. Everything else (friend lists, notifications, search history) is eventually consistent via Redis cache. 
+Speed 
+Ǆ 
+Cursor (keyset) pagination everywhere - no OFFSET, no full table scans 
+Ǆ 
+pg_trgm GIN index on username for fuzzy search without scanning every row 
+Ǆ 
+select_related() / prefetch_related() - zero N+1 queries 
+Ǆ 
+USE DB triggers for repeated queries 
+Ǆ 
+Redis caches: friend list TTL 5 min, loyalty scores TTL 15 min, search history 24 hr 
+Ǆ 
+FastAPI gateway is async - handles hundreds of concurrent connections with a single worker 
+Ǆ 
+Graphene batches DB queries using graphene django's DataLoader (avoids N+1 in GraphQL resolvers) 
+Availability 
+Ǆ 
+Each service is independently deployed on Render - one service down does not cascade 
+Ǆ 
+Circuit breaker (pybreaker) on all gRPC calls: if Auth gRPC is unreachable, gateway falls back to cached JWT validation for 30 seconds 
+Ǆ 
+Celery workers on Render background worker instances - separate from web processes, so a queue backlog doesn't affect HTTP response times 
+Partition tolerance 
+Ǆ 
+Redis pub/sub for events means services do not need synchronous coupling for notifications 
+Ǆ 
+Transaction service writes to its own DB first, then emits Redis event -> Notification service consumes asynchronously. If Notification is partitioned, the event queues in Redis and is retried when the service recovers 
+
+--- Page stream 34 ---
+ 
+Consistency 
+Ǆ 
+select_for_update() on balance row during transaction confirmation - prevents double-spend race condition 
+Ǆ 
+Idempotency key (Redis SETNX, 24h TTL) on transaction creation endpoint - duplicate network retries are safe 
+Ǆ 
+Optimistic locking (version field) on balances table as secondary guard 
+ 
+11. Updated Project File Structure 
+soccho/ -> mono-repo 
+żŇŇ render.yaml -> single file, all Render services 
+żŇŇ .env.example 
+żŇŇ .gitignore 
+żŇŇ shared/ 
+ň żŇŇ proto/ 
+ň ň ŋŇŇ soccho.proto -> gRPC definitions 
+ň żŇŇ encryption.py -> AES-256 helpers 
+ň żŇŇ pagination.py -> cursor paginator base 
+ň ŋŇŇ exceptions.py 
+ň 
+żŇŇ frontend/ -> PURE static (Vercel) 
+ň żŇŇ vercel.json 
+ň żŇŇ index.html -> login (entry) 
+ň żŇŇ register.html 
+ň żŇŇ otp.html 
+ň żŇŇ forgot-password.html 
+ň żŇŇ home.html 
+ň żŇŇ profile.html 
+ň żŇŇ friendship.html 
+ň żŇŇ find-friends.html 
+ň żŇŇ 404.html 
+ň żŇŇ static/ 
+ň ň żŇŇ css/ 
+ň ň ň żŇŇ main.css 
+ň ň ň żŇŇ mobile.css 
+ň ň ň ŋŇŇ animations.css 
+ň ň ŋŇŇ js/ 
+ň ň żŇŇ app.js 
+ň ň żŇŇ charts.js -> Chart.js bar + pie 
+ň ň żŇŇ sw.js -> Service Worker 
+
+--- Page stream 36 ---
+ň ň ŋŇŇ offline.js -> IndexedDB sync 
+ň ŋŇŇ manifest.json 
+ň 
+żŇŇ gateway/ -> FastAPI 
+ň żŇŇ main.py 
+ň żŇŇ routers/ 
+ň ň żŇŇ auth.py 
+ň ň żŇŇ social.py 
+ň ň żŇŇ transaction.py 
+ň ň ŋŇŇ notification.py 
+ň żŇŇ grpc_clients/ 
+ň ň żŇŇ auth_client.py 
+ň ň żŇŇ social_client.py 
+ň ň ŋŇŇ notification_client.py 
+ň żŇŇ middleware/ 
+ň ň żŇŇ jwt.py 
+ň ň żŇŇ rate_limit.py 
+ň ň ŋŇŇ cors.py 
+ň ŋŇŇ requirements.txt 
+żŇŇ auth_service/ -> Django Ninja 
+ň żŇŇ manage.py 
+ň żŇŇ auth_service/ 
+ň ň żŇŇ settings.py 
+ň ň ŋŇŇ urls.py 
+ň żŇŇ users/ 
+ň ň żŇŇ models.py 
+ň ň żŇŇ api.py -> Ninja router 
+ň ň żŇŇ grpc_server.py -> gRPC ValidateToken impl 
+ň ň żŇŇ schemas.py -> Ninja schemas (pydantic) 
+ň ň żŇŇ utils.py -> OTP, email, JWT 
+ň ň ŋŇŇ tasks.py -> Celery: OTP expiry 
+ň ŋŇŇ requirements.txt 
+żŇŇ social_service/ -> DRF + Graphene 
+ň żŇŇ manage.py 
+ň żŇŇ social_service/ 
+ň ň żŇŇ settings.py 
+ň ň ŋŇŇ urls.py 
+ň żŇŇ friends/ 
+ň ň żŇŇ models.py 
+ň ň żŇŇ serializers.py 
+ň ň żŇŇ viewsets.py 
+ň ň żŇŇ routers.py 
+ň ň żŇŇ pagination.py -> cursor 
+ň ň żŇŇ search.py -> pg_trgm 
+
+--- Page stream 38 ---
+ň ň żŇŇ loyalty.py 
+ň ň ŋŇŇ search_history.py -> Redis 24h history 
+ň żŇŇ graphql/ 
+ň ň żŇŇ schema.py -> Graphene schema 
+ň ň żŇŇ types.py 
+ň ň ŋŇŇ resolvers.py 
+ň ŋŇŇ requirements.txt 
+żŇŇ transaction_service/ -> DRF + Graphene 
+ň żŇŇ manage.py 
+ň żŇŇ transaction_service/ 
+ň ň żŇŇ settings.py 
+ň ň żŇŇ urls.py 
+ň ň ŋŇŇ celery.py 
+ň żŇŇ transactions/ 
+ň ň żŇŇ models.py 
+ň ň żŇŇ serializers.py 
+ň ň żŇŇ viewsets.py 
+ň ň żŇŇ routers.py 
+ň ň żŇŇ idempotency.py 
+ň ň żŇŇ balance.py 
+ň ň żŇŇ pagination.py 
+ň ň ŋŇŇ tasks.py -> 30-day auto-delete 
+ň żŇŇ graphql/ 
+ň ň żŇŇ schema.py 
+ň ň żŇŇ types.py 
+ň ň ŋŇŇ resolvers.py 
+ň ŋŇŇ requirements.txt 
+żŇŇ notification_service/ -> Django Channels 
+ň żŇŇ manage.py 
+ň żŇŇ notification_service/ 
+ň ň żŇŇ settings.py 
+ň ň żŇŇ urls.py 
+ň ň ŋŇŇ asgi.py 
+ň żŇŇ notifications/ 
+ň ň żŇŇ models.py 
+ň ň żŇŇ serializers.py 
+ň ň żŇŇ consumers.py -> WS consumer 
+ň ň żŇŇ routing.py 
+ň ň żŇŇ grpc_server.py -> gRPC SendNotification impl 
+ň ň żŇŇ viewsets.py 
+ň ň ŋŇŇ tasks.py -> due-date reminders 
+ň ŋŇŇ requirements.txt 
+ŋŇŇ admin_service/ -> Django default admin 
+ żŇŇ manage.py 
+
+--- Page stream 40 ---
+ żŇŇ admin_service/ 
+ ň żŇŇ settings.py 
+ ň ŋŇŇ urls.py -> path('119115131318115/', admin.site.urls) 
+ żŇŇ portal/ 
+ ň żŇŇ models.py -> proxy models for display 
+ ň ŋŇŇ admin.py -> register with field restrictions 
+ ŋŇŇ requirements.txt 
+ 
+ 
+12.Complete Tech Stack (Updated) 
+Layer 
+Technology 
+Frontend 
+Pure HTMX 2.x, Alpine.js, CSS (custom mobile-first), Chart.js, Service Worker, IndexedDB 
+Frontend hosting 
+Vercel (free, static) 
+Gateway 
+FastAPI + Uvicorn 
+Auth service 
+Django 5 + Django Ninja 
+Social service 
+Django 5 + DRF + Graphene-Django 
+Transaction service 
+Django 5 + DRF + Graphene-Django 
+Notification service 
+Django 5 + Django Channels + Daphne 
+Admin panel 
+Django 5 default admin 
+Inter-service sync 
+gRPC + grpcio + grpcio-tools 
+Inter-service async events 
+Redis pub/sub (via Celery) 
+Task queue 
+Celery + Celery Beat 
+Cache / throttle / search history 
+Redis 7 (Render managed) 
+Databases 
+PostgreSQL 18 (Render managed) 
+Fuzzy search 
+pg_trgm GIN index (built into Postgres - free) 
+Encryption 
+django cryptography (AES-256) 
+
+--- Page stream 42 ---
+Auth 
+djangorestframework simplejwt, django ninja jwt, Google OAuth2 via social django 
+Security 
+django axes (brute force), django csp, pybreaker (circuit breaker) 
+CI/CD 
+Render native (render.yaml - per-service pipelines) 
+Deployment 
+Render (all backend), Vercel (frontend) 
+Local dev only 
+docker-compose.yml 
+ 
+ 
+- 
+13. Security Checklist 
+Threat 
+Implementation 
+User enumeration 
+All auth errors return generic 'Invalid credentials' - no field-level hints 
+BOLA/IDOR 
+Every ViewSet action checks request.user owns the object via get_queryset() filter 
+Brute force 
+django-axes + Redis: 100 attempts/hr -> 1hr IP block; admin route: 5/min 
+Mass assignment 
+DRF serializers with explicit fields list - no __all__ anywhere 
+SQL injection 
+Django ORM parameterized queries only; raw SQL forbidden in code review 
+Excessive data exposure 
+Serializers return only required fields; no model-to-JSON shortcuts 
+Sensitive errors 
+DEBUG=False; custom DRF exception handler returns generic messages 
+Field encryption 
+AES-256 via django-cryptography on amount, due_date, net_balance, email 
+Secret management 
+All secrets in Render env vars; .env.example has placeholder values only 
+CORS 
+CORS_ALLOWED_ORIGINS = ['https://soccho.vercel.app'] only 
+Clickjacking 
+X-Frame-Options: DENY via django-csp 
+SSRF 
+No user-supplied URLs fetched server-side; no URL input fields 
+Race conditions 
+select_for_update() + optimistic version field on balance writes 
+Session hijacking 
+
+--- Page stream 44 ---
+Access token 1h, refresh token 12h with rotation; refresh revoked on logout 
+DoS/DDoS 
+Nginx rate limiting + Render edge; throttle classes on all public endpoints 
+Container security 
+No Dockerfiles in production; Render buildpack - non-root process 
+Dependency scanning 
+pip audit run in GitHub Actions CI on every push 
+Log rotation 
+Django TimedRotatingFileHandler + Render log drain; no secrets in logs 
+Security headers 
+django-csp: CSP, HSTS, X-Content-Type-Options, Referrer-Policy 
+Admin route 
+Non-standard /119115131318115/ - /admin/ returns 404 via Nginx deny 
+Insecure deserialization 
+No pickle, shelve, or eval anywhere; JSON only for inter-service payloads 
+Supply chain 
+pip audit + Dependabot alerts on GitHub repo 
+Sensitive data in URLs 
+Transaction amounts always in POST body - never in query string or URL path 
+ 
+14. Soccho user guide 
+Welcome to **Soccho**, your personal companion for managing money shared among friends. Whether you are splitting a lunch bill, lending a bit of cash to a colleague, or keeping track of who owes what after a group trip, Soccho simplifies the process with a visually engaging and secure interface. This guide will walk you through everything you need to know to master the app and keep your personal ledger organized. 
+ 
+### **Getting Started** 
+Your journey with Soccho begins with a simple and secure signup process. You can choose to create a unique account using your email address and a password or use your existing **Google account** for a faster experience. To ensure your account is protected from the very start, the system will send a **6-digit security code** (OTP) directly to your email inbox. Simply enter this code to verify your identity and unlock your dashboard. This step ensures that only you can access your financial records and personal history. 
+ 
+### **The Dashboard and Visuals** 
+Once you log in, you are greeted by a modern, **3D-inspired home screen** designed to give you an instant snapshot of your financial health. At the top, you will see animated **pie and bar charts** that visually summarize your current standing. These charts update in real-time as you log new transactions. Below the charts is your friends list, where each entry features a colorful "balance chip." We use a simple color-coding system: **green** indicates that a friend owes you money, while **red** indicates that you owe them. The appás "depth" and smooth transitions make navigating between your summary and individual friendship details feel intuitive and fluid. 
+ 
+
+--- Page stream 46 ---
+### **Finding Friends and the Loyalty Score** 
+Connecting with people is the core of the Soccho experience. You can find friends using the search bar, which is smart enough to find names even if you make a small typo. For your convenience, the app **remembers your search history for at least 24 hours**, making it easy to return to a person you were recently looking for. 
+ 
+When you search for friends, you might notice a **Loyalty Score**. This is a private rating-visible only to you-that helps you understand your financial relationship with others. It is calculated based on how reliably transactions are settled and how often you interact. Higher scores suggest a history of consistent and successful lending and borrowing, helping you decide how to manage your future interactions. 
+ 
+### **Recording and Confirming Transactions** 
+Logging a transaction is designed to be a collaborative process to prevent any "he-said, she-said" situations. When you give or lend money, you simply select the friend, enter the amount, and can even add an optional **due date** if you want a reminder later. 
+ 
+Once you submit a transaction, it isn't set in stone immediately. It is sent to your friend as a **pending request**. They will receive a notification and can choose to "Agree" or "Disagree" with the entry. Once they confirm it, your mutual balance and the charts on your home screen update instantly. This ensures that both parties are always on the same page regarding the debt. 
+ 
+### **Notifications and Reminders** 
+Soccho keeps you informed through a dedicated notification drawer that you can slide open from the side of your screen. This drawer manages three main types of alerts: 
+1. **Lending Confirmations:** Requests from friends to verify a new transaction. 
+2. **Acknowledgements:** Confirmations that a payment you made has been received. 
+3. **Due Date Reminders:** If a transaction has a due date, the app will send you a reminder so you never forget a deadline. 
+ 
+### **Automatic Cleanup and Privacy** 
+To keep your records relevant and clutter-free, Soccho automatically **removes transaction entries that are older than 30 days**. This encourages you to settle debts promptly and ensures your dashboard only shows your most current financial activities. Furthermore, your privacy is a top priority; your sensitive financial data is scrambled behind the scenes so that it remains private and secure from any unauthorized eyes. 
+ 
+### **Using Soccho Anywhere** 
+Life happens on the go, and you might not always have a perfect internet connection. Soccho is built to work **offline**. You can still browse your friend list and log transactions while youáre out and about. The app will securely store your actions and automatically **sync them with the server** the moment you are back online. Whether you are using the app on a mobile phone or a desktop, the experience remains fast, responsive, and reliable. 
+
+--- Page stream 48 ---
+ 
+ 
+15. UI/UX Design 
+ 
+**Philosophy:** Facebook-inspired layout, mobile-first, 3D card depth via `box-shadow` + `transform`, smooth transitions, no paid component libraries. 
+ 
+**Color palette:** Deep indigo primary (`#4F46E5`), white surfaces, soft gray backgrounds, accent green for "owed to you", accent red for "you owe." 
+ 
+**Key screens:** 
+ 
+*Login/Register* - centered card on gradient background, animated field focus rings, Google OAuth button with icon, smooth slide-in transitions between login -> register -> OTP. 
+ 
+*Home page (mobile)* - top: notification bell with badge count -> tapping slides in notification drawer from left covering 70% of screen. Below: summary pie chart (Chart.js, animated on load), bar chart (monthly), then friends list with avatar circles + net balance chip (green/red). Sticky bottom nav: Home / Friends / Profile. 
+ 
+*Friendship page* - top card shows friend avatar + net balance in large text. Below: "Give money" form (amount + optional due date) with animated submit button. Transaction history as timeline cards that fade in on scroll. 
+ 
+*Find Friends* - search bar with live results (HTMX `hx-trigger="keyup changed delay:300ms"`). Below: "Suggested Friends" sorted by loyalty score. Pagination via "Show More" button (HTMX `hx-swap="beforeend"`). 
+ 
+*Notifications drawer* - slides in from left. Three visual types: orange pending (with Agree/Disagree chips), gray info, red due-date reminder. Due reminders persist with a pulsing red dot until cleared. 
+ 
+*404 page* - animated SVG of a broken taka coin with bounce animation, "Lost your taka?" text, back-to-home button. 
+ 
+**Animations:** CSS `@keyframes` only - no heavy libraries. Slide-in for drawers (200ms ease-out), scale-in for cards (150ms), number count-up on balance figures (JS `requestAnimationFrame`), skeleton loaders on data fetch. 
+ 
+**3D feel:** Cards use `box-shadow: 0 4px 20px rgba(0,0,0,0.08)` + `transform: translateY(-2px)` on hover. Balance chip uses layered shadows for depth. Avatar circles use `ring` border with inset shadow. 
+15.1 Design Tokens 
+Token 
+
+--- Page stream 50 ---
+Value 
+Usage 
+Primary 
+#1E3A5F 
+Nav, headings, CTAs 
+Accent 
+#2563EB 
+Links, active states, balance you're owed 
+Danger 
+#DC2626 
+Balance you owe, due reminders 
+Success 
+#059669 
+Confirmed transactions, agreement 
+Surface 
+#FFFFFF 
+Card backgrounds 
+Background 
+#F0F2F5 
+Page background (Facebook gray) 
+Text primary 
+#111827 
+Body text 
+Text muted 
+#6B7280 
+Labels, secondary info 
+Border 
+#E5E7EB 
+Card borders, dividers 
+Shadow 
+0 2px 12px rgba(0,0,0,0.08) 
+Card depth (3D feel) 
+Radius 
+12px (cards), 8px (inputs), 20px (avatars) 
+ 
+Animation 
+200ms ease-out (slide-in), 150ms (scale) 
+ 
+ 
+15.2 Page Layouts 
+²Mobile bottom nav bar: Home / Friends / Profile - sticky, 56px tall, icon + label 
+²Desktop left sidebar: same nav items + EqualPay link - 240px fixed 
+²Home page: top bar (logo + notification bell + search icon) -> body (charts -> friend list) 
+
+--- Page stream 52 ---
+²Notification drawer: slides from left on bell tap, covers 75% of screen, backdrop darkens right 25% 
+²Find Friends: sticky search bar at top -> recent searches dropdown -> results -> Suggested Friends section 
+²Friendship page: sticky header with friend avatar + net balance chip -> scrollable body (form + timeline) 
+ 
+15.3 Animations 
+²Page transition: fade + slide-up 200ms (React Router + Framer Motion AnimatePresence) 
+²Notification drawer: slide-in-from-left 200ms ease-out 
+²Balance number: count-up animation on mount (requestAnimationFrame, 600ms) 
+²Friend card hover: translateY(-2px) + shadow deepens, 150ms 
+²Submit button: scale(0.97) on click, loading spinner replaces text 
+²Skeleton loaders: shimmer animation (background-position sweep, 1.5s loop) on friend list, charts 
+²404 page: SVG taka coin with crack, bounce animation, lightning flash on crack, 'Lost your taka?' text 
+ 
+15.4 Mobile UX Priorities 
+²Touch targets minimum 44ę44px on all interactive elements 
+²Input fields 48px tall - comfortable thumb typing 
+²Swipe-to-dismiss on notification items (Framer Motion drag gesture) 
+²Pull-to-refresh on friend list and transaction history 
+²Sticky bottom bar never overlaps content - body has padding-bottom: 72px 
+²Offline banner: appears at top when navigator.onLine = false, 'You are offline - changes will sync' yellow bar 
+ 
+ 
+
+--- Page stream 54 ---
+16. Credentials  Information Needed From Me 
+Render account: 
+Ǆ 
+
+Render account email: 
+reza15361382@gmail.com
+ and I have a personal account 
+Ǆ 
+Render API key (for render.yaml auto-linking) 
+Ǆ 
+Your preferred Render region (Oregon US-West is free tier default) 
+GitHub: 
+Ǆ 
+GitHub username: Hydra1536 and repo name: https://github.com/Hydra1536/Soccho-Microservice 
+Ǆ 
+The repo is public 
+Google OAuth: 
+Ǆ 
+Google Cloud project client_id
+760940518478 ejo8v37b0j7926n5902bhoi0r79tmkg1appsgoogleusercont
+entcom
+ and client_secretGOCSPX EAHgU9Cts_NQ5aSVNBPjT6FfxpfB 
+(from Google Console -> Credentials) 
+Ǆ 
+Authorized redirect URI to register: http//localhost8000/auth/google/callback/ 
+Encryption: 
+Ǆ 
+A 32-byte AES secret key (Generate one for me) 
+Ǆ 
+A Django SECRET_EY per service (Generate these too) 
+POstgres: 
+Ǆ 
+DATABASE_URL= postgresql://anon_chat_9h8j_user:zk15cJIq7mompALIOuAnwVwlaEUjHB7P@dpg-d7p3r4pj2pic73f1jc0g-a/anon_chat_9h8j 
+Other .env credentials: 
+Ǆ 
+# Cache & MQ(Redis) 
+Ƭ 
+REDIS_URL= redis://red-d7p3u6q8qa3s73etvrqg:6379 
+ 
+
+

@@ -1,0 +1,45 @@
+/* Mobile-specific overrides */
+@media (max-width: 640px) {
+  .container {
+    padding: 1rem 0.5rem;
+  }
+  
+  .card {
+    margin: 0.5rem;
+    border-radius: 16px;
+  }
+  
+  input, select, textarea {
+    font-size: 1rem;
+    padding: 1rem;
+    height: 48px;
+  }
+  
+  button {
+    height: 48px;
+    font-size: 1rem;
+  }
+  
+  /* Touch targets */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Bottom nav */
+  .bottom-nav {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  body {
+    padding-bottom: 72px;
+  }
+}
+
+/* Landscape mobile */
+@media (max-width: 768px) and (orientation: landscape) {
+  .card {
+    margin: 0.25rem;
+  }
+}
+
