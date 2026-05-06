@@ -1,0 +1,19 @@
+{
+  "include": [
+    "admin_service",
+    "auth_service",
+    "gateway",
+    "notification_service",
+    "shared",
+    "social_service",
+    "transaction_service"
+  ],
+  "extraPaths": [
+    ".",
+    "admin_service",
+    "auth_service",
+    "notification_service",
+    "social_service",
+    "transaction_service"
+  ]
+}

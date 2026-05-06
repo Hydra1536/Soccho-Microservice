@@ -13,13 +13,14 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         await self.channel_layer.group_add(self.user_group, self.channel_name)
         await self.accept()
 
-    async def disconnect(self, close_code):
+    async def disconnect(self, code):
         await self.channel_layer.group_discard(self.user_group, self.channel_name)
 
-    async def receive(self, text_data):
+    async def receive(self, text_data=None, bytes_data=None):
         data = json.loads(text_data or "{}")
         if data.get("action") == "mark_read" and data.get("id"):
             await self.mark_read(data["id"])
+
 
     async def mark_read(self, notification_id):
         await self.toggle_read(notification_id, True)
@@ -29,9 +30,14 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         Notification.objects.filter(id=notification_id, recipient=self.user).update(is_read=read)
 
     async def receive_notification(self, event):
-        await self.send(text_data=json.dumps({
-            'type': event['type'],
-            'payload': event['payload'],
-            'id': event['id']
-        }))
+        await self.send(
+            text_data=json.dumps(
+                {
+                    "type": event["type"],
+                    "payload": event["payload"],
+                    "id": event["id"],
+                }
+            )
+        )
+
 

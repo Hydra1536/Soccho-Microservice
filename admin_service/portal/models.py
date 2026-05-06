@@ -14,4 +14,4 @@ class UserProxy(AuthUser):
 
     @property
     def loyalty_score(self):
-        return getattr(self, "loyalty_score", 0.0)
+        return 0.0
