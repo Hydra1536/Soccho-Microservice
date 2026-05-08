@@ -1,41 +1,38 @@
+# Render.yaml - Native Python runtime (NO Docker)
+# Render auto-detects Python requirements from each service directory
+
 services:
+  # ========== API GATEWAY ==========
   - name: soccho-gateway
     type: web
     runtime: python
-    buildCommand: pip install -r gateway/requirements.txt && python -m grpc_tools.protoc -I shared/proto --python_out=shared --grpc_python_out=shared shared/proto/soccho.proto
+    pythonVersion: 3.12
     startCommand: gunicorn gateway.main:app --bind 0.0.0.0:$PORT --workers 4 --worker-class uvicorn.workers.UvicornWorker --timeout 120
-    numInstances: 1
     envVars:
       - key: AUTH_SERVICE_URL
-        value: https://soccho-auth.onrender.com
+        value: https://soccho-auth.onrender.com/api
       - key: SOCIAL_SERVICE_URL
-        value: https://soccho-social.onrender.com
+        value: https://soccho-social.onrender.com/api
       - key: TRANSACTION_SERVICE_URL
-        value: https://soccho-transaction.onrender.com
+        value: https://soccho-transaction.onrender.com/api
       - key: NOTIFICATION_SERVICE_URL
-        value: https://soccho-notification.onrender.com
+        value: https://soccho-notification.onrender.com/api
       - key: REDIS_URL
         fromService:
           name: soccho-redis
           type: redis
           property: connectionString
-      - key: JWT_SECRET
-        sync: false
       - key: GATEWAY_SECRET_KEY
         sync: false
       - key: ALLOWED_ORIGINS
         value: https://soccho.vercel.app,https://www.soccho.vercel.app
-      - key: DEBUG
-        value: "false"
-      - key: PYTHONUNBUFFERED
-        value: "1"
 
+  # ========== AUTH SERVICE ==========
   - name: soccho-auth
     type: web
     runtime: python
-    buildCommand: pip install -r auth_service/requirements.txt && cd auth_service && python manage.py migrate --noinput
-    startCommand: cd auth_service && gunicorn auth_service.wsgi:application --bind 0.0.0.0:$PORT --workers 4 --timeout 120
-    numInstances: 1
+    pythonVersion: 3.12
+    startCommand: cd auth_service && python manage.py migrate --noinput && gunicorn auth_service.wsgi:application --bind 0.0.0.0:$PORT --workers 4 --timeout 120
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -50,19 +47,15 @@ services:
         sync: false
       - key: AES_SECRET_KEY
         sync: false
-      - key: DEBUG
-        value: "false"
-      - key: PYTHONUNBUFFERED
-        value: "1"
       - key: ALLOWED_HOSTS
-        value: "soccho-auth.onrender.com,localhost"
+        value: soccho-auth.onrender.com
 
+  # ========== SOCIAL SERVICE ==========
   - name: soccho-social
     type: web
     runtime: python
-    buildCommand: pip install -r social_service/requirements.txt && cd social_service && python manage.py migrate --noinput
-    startCommand: cd social_service && gunicorn social_service.wsgi:application --bind 0.0.0.0:$PORT --workers 4 --timeout 120
-    numInstances: 1
+    pythonVersion: 3.12
+    startCommand: cd social_service && python manage.py migrate --noinput && gunicorn social_service.wsgi:application --bind 0.0.0.0:$PORT --workers 4 --timeout 120
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -75,19 +68,15 @@ services:
           property: connectionString
       - key: SOCIAL_SECRET_KEY
         sync: false
-      - key: DEBUG
-        value: "false"
-      - key: PYTHONUNBUFFERED
-        value: "1"
       - key: ALLOWED_HOSTS
-        value: "soccho-social.onrender.com,localhost"
+        value: soccho-social.onrender.com
 
+  # ========== TRANSACTION SERVICE ==========
   - name: soccho-transaction
     type: web
     runtime: python
-    buildCommand: pip install -r transaction_service/requirements.txt && cd transaction_service && python manage.py migrate --noinput
-    startCommand: cd transaction_service && gunicorn transaction_service.wsgi:application --bind 0.0.0.0:$PORT --workers 4 --timeout 120
-    numInstances: 1
+    pythonVersion: 3.12
+    startCommand: cd transaction_service && python manage.py migrate --noinput && gunicorn transaction_service.wsgi:application --bind 0.0.0.0:$PORT --workers 4 --timeout 120
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -100,19 +89,15 @@ services:
           property: connectionString
       - key: TRANSACTION_SECRET_KEY
         sync: false
-      - key: DEBUG
-        value: "false"
-      - key: PYTHONUNBUFFERED
-        value: "1"
       - key: ALLOWED_HOSTS
-        value: "soccho-transaction.onrender.com,localhost"
+        value: soccho-transaction.onrender.com
 
+  # ========== NOTIFICATION SERVICE ==========
   - name: soccho-notification
     type: web
     runtime: python
-    buildCommand: pip install -r notification_service/requirements.txt && cd notification_service && python manage.py migrate --noinput
-    startCommand: cd notification_service && daphne -b 0.0.0.0 -p $PORT notification_service.asgi:application
-    numInstances: 1
+    pythonVersion: 3.12
+    startCommand: cd notification_service && python manage.py migrate --noinput && daphne -b 0.0.0.0 -p $PORT notification_service.asgi:application
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -125,19 +110,15 @@ services:
           property: connectionString
       - key: NOTIFICATION_SECRET_KEY
         sync: false
-      - key: DEBUG
-        value: "false"
-      - key: PYTHONUNBUFFERED
-        value: "1"
       - key: ALLOWED_HOSTS
-        value: "soccho-notification.onrender.com,localhost"
+        value: soccho-notification.onrender.com
 
+  # ========== ADMIN SERVICE ==========
   - name: soccho-admin
     type: web
     runtime: python
-    buildCommand: pip install -r admin_service/requirements.txt && cd admin_service && python manage.py migrate --noinput && python manage.py collectstatic --noinput
-    startCommand: cd admin_service && gunicorn admin_service.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120
-    numInstances: 1
+    pythonVersion: 3.12
+    startCommand: cd admin_service && python manage.py migrate --noinput && python manage.py collectstatic --noinput && gunicorn admin_service.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -150,19 +131,15 @@ services:
           property: connectionString
       - key: ADMIN_SECRET_KEY
         sync: false
-      - key: DEBUG
-        value: "false"
-      - key: PYTHONUNBUFFERED
-        value: "1"
       - key: ALLOWED_HOSTS
-        value: "soccho-admin.onrender.com,localhost"
+        value: soccho-admin.onrender.com
 
+  # ========== CELERY WORKER ==========
   - name: soccho-celery-worker
     type: worker
     runtime: python
-    buildCommand: pip install -r transaction_service/requirements.txt
+    pythonVersion: 3.12
     startCommand: cd transaction_service && celery -A transaction_service worker --loglevel=info --concurrency=4
-    numInstances: 1
     envVars:
       - key: REDIS_URL
         fromService:
@@ -173,17 +150,13 @@ services:
         fromDatabase:
           name: soccho_db
           property: connectionString
-      - key: DEBUG
-        value: "false"
-      - key: PYTHONUNBUFFERED
-        value: "1"
 
+  # ========== CELERY BEAT ==========
   - name: soccho-celery-beat
     type: worker
     runtime: python
-    buildCommand: pip install -r transaction_service/requirements.txt
+    pythonVersion: 3.12
     startCommand: cd transaction_service && celery -A transaction_service beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
-    numInstances: 1
     envVars:
       - key: REDIS_URL
         fromService:
@@ -194,19 +167,14 @@ services:
         fromDatabase:
           name: soccho_db
           property: connectionString
-      - key: DEBUG
-        value: "false"
-      - key: PYTHONUNBUFFERED
-        value: "1"
 
+  # ========== REDIS CACHE ==========
   - name: soccho-redis
     type: redis
     version: "7"
 
+# ========== POSTGRESQL DATABASE ==========
 databases:
   - name: soccho_db
     engine: postgres
     version: "16"
-    plan: free
-    postgresSQLVersion: "16"
-
