@@ -30,7 +30,7 @@ services:
   gateway:
     build:
       context: .
-      dockerfile: gateway/Dockerfile
+      dockerfile: gateway/Dockerfile.local
     ports:
       - "8000:8000"
     depends_on:
@@ -53,7 +53,7 @@ services:
   auth:
     build:
       context: .
-      dockerfile: auth_service/Dockerfile
+      dockerfile: auth_service/Dockerfile.local
     ports:
       - "8001:8000"
     depends_on:
@@ -70,7 +70,7 @@ services:
   social:
     build:
       context: .
-      dockerfile: social_service/Dockerfile
+      dockerfile: social_service/Dockerfile.local
     ports:
       - "8002:8000"
     depends_on:
@@ -87,7 +87,7 @@ services:
   transaction:
     build:
       context: .
-      dockerfile: transaction_service/Dockerfile
+      dockerfile: transaction_service/Dockerfile.local
     ports:
       - "8003:8000"
     depends_on:
@@ -121,7 +121,7 @@ services:
   admin:
     build:
       context: .
-      dockerfile: admin_service/Dockerfile
+      dockerfile: admin_service/Dockerfile.local
     ports:
       - "8005:8000"
     depends_on:
