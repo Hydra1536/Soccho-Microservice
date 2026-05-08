@@ -15,7 +15,7 @@ channels-redis==4.2.0
 # --- Database & Auth ---
 psycopg[binary]==3.2.1
 redis==5.1.1
-django-cryptography==3.0.1
+django-cryptography==1.1
 djangorestframework-simplejwt==5.3.1
 social-auth-app-django==5.4.0
 python-jose[cryptography]==3.3.0
