@@ -8,6 +8,7 @@ services:
     runtime: python
     pythonVersion: 3.12
     rootDirectory: gateway
+    buildCommand: pip install -r requirements.txt
     startCommand: gunicorn gateway.main:app --bind 0.0.0.0:$PORT --workers 4 --worker-class uvicorn.workers.UvicornWorker --timeout 120
     envVars:
       - key: AUTH_SERVICE_URL
@@ -34,6 +35,7 @@ services:
     runtime: python
     pythonVersion: 3.12
     rootDirectory: auth_service
+    buildCommand: pip install -r requirements.txt
     startCommand: cd auth_service && python manage.py migrate --noinput && gunicorn auth_service.wsgi:application --bind 0.0.0.0:$PORT --workers 4 --timeout 120
     envVars:
       - key: DATABASE_URL
@@ -58,6 +60,7 @@ services:
     runtime: python
     pythonVersion: 3.12
     rootDirectory: social_service
+    buildCommand: pip install -r requirements.txt
     startCommand: cd social_service && python manage.py migrate --noinput && gunicorn social_service.wsgi:application --bind 0.0.0.0:$PORT --workers 4 --timeout 120
     envVars:
       - key: DATABASE_URL
@@ -80,6 +83,7 @@ services:
     runtime: python
     pythonVersion: 3.12
     rootDirectory: transaction_service
+    buildCommand: pip install -r requirements.txt
     startCommand: cd transaction_service && python manage.py migrate --noinput && gunicorn transaction_service.wsgi:application --bind 0.0.0.0:$PORT --workers 4 --timeout 120
     envVars:
       - key: DATABASE_URL
@@ -102,6 +106,7 @@ services:
     runtime: python
     pythonVersion: 3.12
     rootDirectory: notification_service
+    buildCommand: pip install -r requirements.txt
     startCommand: cd notification_service && python manage.py migrate --noinput && daphne -b 0.0.0.0 -p $PORT notification_service.asgi:application
     envVars:
       - key: DATABASE_URL
@@ -124,6 +129,7 @@ services:
     runtime: python
     pythonVersion: 3.12
     rootDirectory: admin_service
+    buildCommand: pip install -r requirements.txt
     startCommand: cd admin_service && python manage.py migrate --noinput && python manage.py collectstatic --noinput && gunicorn admin_service.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120
     envVars:
       - key: DATABASE_URL
@@ -146,6 +152,7 @@ services:
     runtime: python
     pythonVersion: 3.12
     rootDirectory: transaction_service
+    buildCommand: pip install -r requirements.txt
     startCommand: cd transaction_service && celery -A transaction_service worker --loglevel=info --concurrency=4
     envVars:
       - key: REDIS_URL
@@ -164,6 +171,7 @@ services:
     runtime: python
     pythonVersion: 3.12
     rootDirectory: transaction_service
+    buildCommand: pip install -r requirements.txt
     startCommand: cd transaction_service && celery -A transaction_service beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
     envVars:
       - key: REDIS_URL
