@@ -6,7 +6,7 @@ django-extensions==3.2.3
 psycopg[binary]==3.2.1
 redis==5.1.1
 celery==5.4.0
-python-fuzzywuzzy==0.18.0
+fuzzywuzzy==0.18.3
 python-Levenshtein==0.25.1
 gunicorn==22.0.0
 grpcio==1.66.1
