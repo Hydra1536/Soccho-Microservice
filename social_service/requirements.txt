@@ -11,5 +11,5 @@ python-Levenshtein==0.25.1
 gunicorn==22.0.0
 grpcio==1.66.1
 grpcio-tools==1.66.1
-drf-spectacular==0.37.4
+drf-spectacular==0.29.0
 

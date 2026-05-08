@@ -38,7 +38,7 @@ python-multipart==0.0.9
 # --- Tools & Utilities ---
 python-dotenv==1.0.1
 django-extensions==3.2.3
-drf-spectacular==0.37.4
+drf-spectacular==0.29.0
 slowapi==0.1.9
 pybreaker==1.1.0
 python-fuzzywuzzy==0.18.0
