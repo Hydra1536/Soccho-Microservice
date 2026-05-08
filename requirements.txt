@@ -13,7 +13,7 @@ channels==4.1.0
 channels-redis==4.2.0
 
 # --- Database & Auth ---
-psycopg[binary]==3.2.1
+psycopg[binary]>=3.2.0
 redis==5.1.1
 django-cryptography==1.1
 djangorestframework-simplejwt==5.3.1
