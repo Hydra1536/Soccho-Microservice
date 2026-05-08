@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   postgres:
-    image: postgres:16
+    image: postgres:16-alpine
     environment:
       POSTGRES_DB: soccho
       POSTGRES_USER: soccho
@@ -11,46 +11,129 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U soccho"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   gateway:
-    build: ./gateway
+    build:
+      context: .
+      dockerfile: gateway/Dockerfile
     ports:
       - "8000:8000"
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      auth:
+        condition: service_started
     environment:
       DATABASE_URL: postgresql://soccho:soccho@postgres:5432/soccho
       REDIS_URL: redis://redis:6379
+      AUTH_SERVICE_URL: http://auth:8000/api
+      SOCIAL_SERVICE_URL: http://social:8000/api
+      TRANSACTION_SERVICE_URL: http://transaction:8000/api
+      NOTIFICATION_SERVICE_URL: http://notification:8000/api
+      ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:8080"
+      DEBUG: "false"
 
   auth:
-    build: ./auth_service
+    build:
+      context: .
+      dockerfile: auth_service/Dockerfile
     ports:
       - "8001:8000"
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://soccho:soccho@postgres:5432/soccho
+      REDIS_URL: redis://redis:6379
+      AUTH_SECRET_KEY: "dev-secret-key-change-in-prod"
+      DEBUG: "false"
 
   social:
-    build: ./social_service
+    build:
+      context: .
+      dockerfile: social_service/Dockerfile
     ports:
       - "8002:8000"
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://soccho:soccho@postgres:5432/soccho
+      REDIS_URL: redis://redis:6379
+      SOCIAL_SECRET_KEY: "dev-secret-key-change-in-prod"
+      DEBUG: "false"
 
   transaction:
-    build: ./transaction_service
+    build:
+      context: .
+      dockerfile: transaction_service/Dockerfile
     ports:
       - "8003:8000"
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://soccho:soccho@postgres:5432/soccho
+      REDIS_URL: redis://redis:6379
+      TRANSACTION_SECRET_KEY: "dev-secret-key-change-in-prod"
+      DEBUG: "false"
+
+  notification:
+    build:
+      context: .
+      dockerfile: notification_service/Dockerfile
+    ports:
+      - "8004:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://soccho:soccho@postgres:5432/soccho
+      REDIS_URL: redis://redis:6379
+      NOTIFICATION_SECRET_KEY: "dev-secret-key-change-in-prod"
+      DEBUG: "false"
+
+  admin:
+    build:
+      context: .
+      dockerfile: admin_service/Dockerfile
+    ports:
+      - "8005:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://soccho:soccho@postgres:5432/soccho
+      REDIS_URL: redis://redis:6379
+      ADMIN_SECRET_KEY: "dev-secret-key-change-in-prod"
+      DEBUG: "false"
 
 volumes:
   postgres_data:

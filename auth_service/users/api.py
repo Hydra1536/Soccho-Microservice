@@ -2,7 +2,6 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.core.mail import send_mail
 from django.utils import timezone
 from jose import jwt
 from ninja import Router
@@ -10,6 +9,7 @@ from ninja.errors import HttpError
 from pydantic import BaseModel
 
 from users.utils import create_otp, verify_otp
+from users.email_service import send_otp_email_sync
 
 
 User = get_user_model()
@@ -89,14 +89,15 @@ def register(request, payload: RegisterSchema):
     )
     otp = create_otp(user.id, "register")
 
-    send_mail(
-        "Soccho OTP",
-        f"Your verification OTP is {otp}. It expires in 10 minutes.",
-        settings.EMAIL_HOST_USER or "no-reply@soccho.local",
-        [payload.email],
-        fail_silently=True,
-    )
-    return {"message": "OTP sent"}
+    # Send OTP via FormSubmit.co (free, no credentials needed)
+    email_sent = send_otp_email_sync(payload.email, otp, purpose="register")
+    if not email_sent:
+        # Log but don't fail - user can retry
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(f"Failed to send registration OTP to {payload.email}")
+    
+    return {"message": "OTP sent to your email"}
 
 
 @router.post("/otp-verify")
@@ -115,17 +116,18 @@ def otp_verify(request, payload: OTPSchema):
 def forgot_password(request, payload: ForgotPasswordSchema):
     user = User.objects.filter(email__iexact=payload.email, is_active=True).first()
     if not user:
-        # Avoid user enumeration
+        # Avoid user enumeration - always return success message
         return {"message": "If the email exists, an OTP was sent"}
 
     otp = create_otp(user.id, "reset")
-    send_mail(
-        "Soccho Password Reset OTP",
-        f"Your reset OTP is {otp}. It expires in 10 minutes.",
-        settings.EMAIL_HOST_USER or "no-reply@soccho.local",
-        [payload.email],
-        fail_silently=True,
-    )
+    
+    # Send OTP via FormSubmit.co (free, no credentials needed)
+    email_sent = send_otp_email_sync(payload.email, otp, purpose="reset")
+    if not email_sent:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(f"Failed to send password reset OTP to {payload.email}")
+    
     return {"message": "If the email exists, an OTP was sent"}
 
 
