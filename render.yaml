@@ -57,7 +57,7 @@ services:
     type: web
     runtime: python
     pythonVersion: 3.12
-    buildCommand: pip install --upgrade pip && pip install -r social_service/requirements.txt
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
     startCommand: cd social_service && python manage.py migrate --noinput && gunicorn social_service.wsgi:application --bind 0.0.0.0:$PORT --workers 4 --timeout 120
     envVars:
       - key: DATABASE_URL
