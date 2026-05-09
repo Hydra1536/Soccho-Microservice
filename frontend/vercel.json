@@ -2,14 +2,12 @@
   "buildCommand": "echo 'Static site - no build needed'",
   "installCommand": "echo 'Static site - no install needed'",
   "outputDirectory": "./",
-  "framework": "other",
-  "cleanUrls": false,
+  "version": 2,
+  "cleanUrls": true,
   "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/$1"
-    }
-  ],
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+,
   "headers": [
     {
       "source": "/(.*)",
