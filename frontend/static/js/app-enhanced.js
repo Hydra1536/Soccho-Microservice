@@ -47,6 +47,62 @@ class SocchoApp {
    * Set up HTMX error and response handlers
    */
   initHTMXHandlers() {
+    // ---- Robust HTMX URL rewriting (production-safe) ----
+    // Ensure relative HTMX targets like `/auth/login` are routed to the correct service gateway.
+    // This is a fallback because Vercel routing can affect earlier rewrite hooks.
+    const rewriteIfNeeded = (rawPathOrUrl) => {
+      if (!rawPathOrUrl || typeof rawPathOrUrl !== 'string') return rawPathOrUrl;
+
+      // Already absolute (http/https/ws/wss) -> keep as-is
+      if (
+        rawPathOrUrl.startsWith('http://') ||
+        rawPathOrUrl.startsWith('https://') ||
+        rawPathOrUrl.startsWith('ws://') ||
+        rawPathOrUrl.startsWith('wss://')
+      ) {
+        return rawPathOrUrl;
+      }
+
+      // Relative paths -> use API_CONFIG
+      if (rawPathOrUrl.startsWith('/')) {
+        return API_CONFIG.buildFullUrl(rawPathOrUrl);
+      }
+
+      return rawPathOrUrl;
+    };
+
+    // HTMX v2 provides `htmx:configRequest` (best hook to mutate request)
+    document.body.addEventListener('htmx:configRequest', (evt) => {
+      try {
+        const path = evt.detail.path;
+        if (!path) return;
+
+        const newUrl = rewriteIfNeeded(path);
+        if (newUrl && newUrl !== path) {
+          // HTMX uses `detail.path` internally for the request URL
+          evt.detail.path = newUrl;
+        }
+      } catch (e) {
+        console.warn('[HTMX] configRequest rewrite failed:', e);
+      }
+    });
+
+    // Fallback hook
+    document.body.addEventListener('htmx:beforeRequest', (evt) => {
+      try {
+        const path = evt.detail.path;
+        if (!path) return;
+
+        const newUrl = rewriteIfNeeded(path);
+        if (newUrl && newUrl !== path) {
+          evt.detail.path = newUrl;
+        }
+      } catch (e) {
+        console.warn('[HTMX] beforeRequest rewrite failed:', e);
+      }
+    });
+
+    // ---- Error handling ----
     document.body.addEventListener('htmx:responseError', (e) => {
       console.error('[HTMX] Response error:', e.detail);
       this.showToast('Network error. Please try again.', 'error');
