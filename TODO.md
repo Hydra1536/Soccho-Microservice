@@ -1,8 +1,5 @@
-- [x] Inspect design screenshots vs current `frontend/index.html` + login-related templates
-- [x] Fix 404/connectivity by updating remaining relative HTMX/fetch URLs (auth/social/notification/transaction) to absolute service URLs
-- [x] Fix Google login redirect + manifest icon path
-- [x] Fix Django Channels AppRegistryNotReady by adding `django.setup()` before routing/model imports in `notification_service/notification_service/asgi.py`
-- [x] Provide corrected code for:
-  - [x] `frontend/index.html`
-  - [x] `frontend/login.html` (not present; login is embedded in `frontend/index.html`)
-  - [x] `notification_service/notification_service/asgi.py`
+## Task: Fix auth gateway 503 and Google login 404
+
+- [ ] Fix Google OAuth 404 by wiring `social_django.urls` in `auth_service/auth_service/urls.py` under `/auth/`.
+- [ ] Improve gateway `/auth/login` error clarity in `gateway/routers/auth.py` when `AUTH_SERVICE_URL` is unreachable.
+- [ ] Verification: confirm auth_service `/api/login` reachable through gateway and confirm Google login endpoint responds (no 404).

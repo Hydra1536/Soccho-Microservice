@@ -25,9 +25,16 @@ async def _forward_post(path: str, payload: dict):
         async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.post(url, json=payload)
     except httpx.HTTPError as exc:
+        # Make 503 troubleshooting easier on deployments (e.g., Render) where "localhost"
+        # points to the gateway container itself.
         raise HTTPException(
             status_code=503,
-            detail=f"Auth service unavailable (AUTH_SERVICE_URL={AUTH_SERVICE_URL}): {exc}",
+            detail=(
+                "Auth service unavailable. "
+                f"Tried: {url}. "
+                f"Check gateway env AUTH_SERVICE_URL={AUTH_SERVICE_URL} "
+                f"and that gateway can reach auth_service."
+            ),
         ) from exc
 
     if resp.status_code >= 400:
