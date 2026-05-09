@@ -15,25 +15,23 @@ const API_CONFIG = {
     const baseURL = this.getBaseURL();
     window.API_BASE_URL = baseURL;
     
-    // Configure HTMX to use the correct base URL
+    // Intercept HTMX requests to prepend the API base URL
     if (window.htmx) {
-      document.body.addEventListener('htmx:configRequest', (detail) => {
-        const path = detail.detail.parameters.get ? detail.detail.parameters.get('path') : null;
-        // Intercept relative URLs and convert to absolute
-        if (detail.detail.verb && detail.detail.path && detail.detail.path.startsWith('/')) {
-          // This will be handled by the server-side rewrite or client-side JavaScript
+      document.addEventListener('htmx:ajax:beforeRequest', (evt) => {
+        const path = evt.detail.path;
+        if (path && path.startsWith('/') && !path.includes('://')) {
+          // Check if it's an API endpoint (starts with /auth, /social, /transactions, etc.)
+          if (path.match(/^\/(auth|social|transactions|notifications)\//)) {
+            evt.detail.path = baseURL + path;
+          }
         }
       });
     }
   }
 };
 
-// Initialize on DOM ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => API_CONFIG.init());
-} else {
-  API_CONFIG.init();
-}
+// Initialize on script load (before other scripts)
+API_CONFIG.init();
 
 // Utility function to make API calls
 async function apiCall(method, endpoint, data = null) {
