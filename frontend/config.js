@@ -1,58 +1,126 @@
-// API Configuration
-// This file handles dynamic API base URL configuration for the frontend
+// API Configuration for Soccho Microservices
+// Maps frontend API endpoints to their corresponding Render services
 
 const API_CONFIG = {
-  // Determine API base URL based on environment
-  getBaseURL: function() {
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-      return 'http://localhost:8000';
-    }
-    // For production, use the gateway URL from environment or default
-    return window.__API_BASE_URL__ || 'https://soccho-gateway.onrender.com';
+  // Service endpoints
+  SERVICES: {
+    GATEWAY: 'https://soccho-gateway.onrender.com',
+    AUTH: 'https://soccho-auth.onrender.com',
+    SOCIAL: 'https://soccho-social.onrender.com',
+    TRANSACTIONS: 'https://soccho-transaction.onrender.com',
+    NOTIFICATIONS_WS: 'wss://soccho-notification.onrender.com',
   },
-  
-  init: function() {
-    const baseURL = this.getBaseURL();
-    window.API_BASE_URL = baseURL;
+
+  // Local development endpoints
+  LOCAL_SERVICES: {
+    GATEWAY: 'http://localhost:8000',
+    AUTH: 'http://localhost:8001',
+    SOCIAL: 'http://localhost:8002',
+    TRANSACTIONS: 'http://localhost:8003',
+    NOTIFICATIONS_WS: 'ws://localhost:8004',
+  },
+
+  // Route mapping: endpoint pattern -> service
+  ROUTE_MAP: {
+    '/auth': 'GATEWAY',
+    '/social': 'GATEWAY',
+    '/transactions': 'GATEWAY',
+    '/notifications': 'NOTIFICATIONS_WS',
+  },
+
+  isDevelopment: function() {
+    return window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  },
+
+  getServices: function() {
+    return this.isDevelopment() ? this.LOCAL_SERVICES : this.SERVICES;
+  },
+
+  getServiceUrl: function(endpoint) {
+    const services = this.getServices();
     
-    // Intercept HTMX requests to prepend the API base URL
+    // Check if it's a WebSocket endpoint
+    if (endpoint.includes('/ws/') || endpoint === '/ws') {
+      return services.NOTIFICATIONS_WS;
+    }
+
+    // Find matching route
+    for (let pattern in this.ROUTE_MAP) {
+      if (endpoint.startsWith(pattern)) {
+        const serviceName = this.ROUTE_MAP[pattern];
+        return services[serviceName];
+      }
+    }
+
+    // Default to gateway
+    return services.GATEWAY;
+  },
+
+  buildFullUrl: function(endpoint) {
+    if (endpoint.startsWith('http://') || endpoint.startsWith('https://') || 
+        endpoint.startsWith('ws://') || endpoint.startsWith('wss://')) {
+      return endpoint;
+    }
+    const baseUrl = this.getServiceUrl(endpoint);
+    return baseUrl + endpoint;
+  },
+
+  init: function() {
+    const services = this.getServices();
+    window.API_GATEWAY = services.GATEWAY;
+    window.API_CONFIG = this;
+
+    // Intercept HTMX requests to use proper service URLs
     if (window.htmx) {
       document.addEventListener('htmx:ajax:beforeRequest', (evt) => {
         const path = evt.detail.path;
         if (path && path.startsWith('/') && !path.includes('://')) {
-          // Check if it's an API endpoint (starts with /auth, /social, /transactions, etc.)
-          if (path.match(/^\/(auth|social|transactions|notifications)\//)) {
-            evt.detail.path = baseURL + path;
-          }
+          evt.detail.path = this.buildFullUrl(path);
         }
       });
     }
+
+    console.log('[Soccho API Config] Initialized', {
+      environment: this.isDevelopment() ? 'development' : 'production',
+      gateway: services.GATEWAY,
+    });
   }
 };
 
-// Initialize on script load (before other scripts)
+// Initialize on script load
 API_CONFIG.init();
 
-// Utility function to make API calls
-async function apiCall(method, endpoint, data = null) {
-  const url = API_CONFIG.getBaseURL() + endpoint;
-  const options = {
+// Utility function for fetch API calls
+async function apiCall(method, endpoint, data = null, options = {}) {
+  const url = API_CONFIG.buildFullUrl(endpoint);
+  const fetchOptions = {
     method,
     headers: {
       'Content-Type': 'application/json',
+      ...options.headers,
     },
-    credentials: 'include', // Send cookies for authentication
+    credentials: 'include',
+    ...options,
   };
-  
+
   if (data) {
-    options.body = JSON.stringify(data);
+    fetchOptions.body = JSON.stringify(data);
   }
-  
+
   try {
-    const response = await fetch(url, options);
+    const response = await fetch(url, fetchOptions);
+    if (!response.ok) {
+      throw new Error(`API Error: ${response.statusText} (${response.status})`);
+    }
     return response;
   } catch (error) {
-    console.error('API call failed:', error);
+    console.error('[API Error]', endpoint, error);
     throw error;
   }
+}
+
+// Utility function to get WebSocket URL
+function getWebSocketUrl(endpoint) {
+  const url = API_CONFIG.buildFullUrl(endpoint);
+  return url;
 }
