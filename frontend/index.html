@@ -365,13 +365,14 @@
         },
 
         handleGoogleLogin() {
-          window.location.href = 'https://soccho-auth.onrender.com/auth/google/login';
+          window.location.href = 'https://soccho-gateway.onrender.com/auth/google/login';
         },
 
         init() {
           console.log('[AuthApp] Initialized with:', {
             gatewayUrl: 'https://soccho-gateway.onrender.com',
-            authUrl: 'https://soccho-auth.onrender.com',
+            authUrl: 'https://soccho-gateway.onrender.com',
+
           });
 
           // Register service worker

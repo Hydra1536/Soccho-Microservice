@@ -4,6 +4,8 @@
 const API_CONFIG = {
   // Service endpoints
   SERVICES: {
+    // IMPORTANT: the frontend should call the gateway for auth routes.
+    // The auth service itself exposes routes under /api/..., while the gateway exposes /auth/...
     GATEWAY: 'https://soccho-gateway.onrender.com',
     AUTH: 'https://soccho-auth.onrender.com',
     SOCIAL: 'https://soccho-social.onrender.com',
