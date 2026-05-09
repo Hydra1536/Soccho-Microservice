@@ -3,7 +3,6 @@
   "installCommand": "echo 'Static site - no install needed'",
   "outputDirectory": "./",
   "framework": "other",
-  "public": "./",
   "cleanUrls": false,
   "rewrites": [
     {
