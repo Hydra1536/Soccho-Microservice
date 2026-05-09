@@ -53,7 +53,7 @@ class SocchoApp {
     const rewriteIfNeeded = (rawPathOrUrl) => {
       if (!rawPathOrUrl || typeof rawPathOrUrl !== 'string') return rawPathOrUrl;
 
-      // Already absolute (http/https/ws/wss) -> keep as-is
+      // If already absolute, keep as-is
       if (
         rawPathOrUrl.startsWith('http://') ||
         rawPathOrUrl.startsWith('https://') ||

@@ -1,17 +1,25 @@
 {
-  "name": "Soccho",
+  "name": "Soccho - Money Management",
   "short_name": "Soccho",
-  "description": "Track money with friends",
+  "description": "Track money with friends easily",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#1E3A5F",
-  "theme_color": "#2563EB",
+  "background_color": "#FFFFFF",
+  "theme_color": "#00B87D",
+  "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "icon.svg",
+      "src": "/icon.svg",
+      "sizes": "any",
       "type": "image/svg+xml",
-      "sizes": "192x192",
       "purpose": "any"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/static/screenshots/screenshot1.png",
+      "sizes": "540x720",
+      "type": "image/png"
     }
   ]
 }

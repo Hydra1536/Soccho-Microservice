@@ -1,0 +1,8 @@
+- [x] Inspect design screenshots vs current `frontend/index.html` + login-related templates
+- [x] Fix 404/connectivity by updating remaining relative HTMX/fetch URLs (auth/social/notification/transaction) to absolute service URLs
+- [x] Fix Google login redirect + manifest icon path
+- [x] Fix Django Channels AppRegistryNotReady by adding `django.setup()` before routing/model imports in `notification_service/notification_service/asgi.py`
+- [x] Provide corrected code for:
+  - [x] `frontend/index.html`
+  - [x] `frontend/login.html` (not present; login is embedded in `frontend/index.html`)
+  - [x] `notification_service/notification_service/asgi.py`
