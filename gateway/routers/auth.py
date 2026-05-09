@@ -64,6 +64,7 @@ async def forgot_password(request: Request):
     return await _forward_post("forgot-password", payload)
 
 
+
 @router.post("/reset-password")
 async def reset_password(request: Request):
     form = await request.form()
@@ -80,6 +81,7 @@ async def reset_password(request: Request):
 async def google_login():
     # Placeholder endpoint until OAuth callback service flow is wired.
     return {"detail": "Google OAuth flow is not configured in gateway yet."}
+
 
 
 @router.get("/google/callback")
