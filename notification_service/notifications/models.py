@@ -1,7 +1,5 @@
 from django.db import models
-from django.contrib.auth import get_user_model
-
-User = get_user_model()
+from django.conf import settings
 
 class Notification(models.Model):
     TYPE_CHOICES = [
@@ -10,7 +8,7 @@ class Notification(models.Model):
         ('due_reminder', 'Due Date Reminder'),
     ]
     
-    recipient = models.ForeignKey(User, on_delete=models.CASCADE)
+    recipient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     type = models.CharField(max_length=20, choices=TYPE_CHOICES)
     payload_encrypted = models.TextField()
     is_read = models.BooleanField(default=False)
