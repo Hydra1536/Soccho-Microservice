@@ -3,98 +3,116 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Soccho - Money management made easy. Track IOUs with friends.">
+  <meta name="theme-color" content="#00B87D">
   <title>Soccho - Home</title>
   <script src="config.js"></script>
+  <script src="static/js/error-handler.js"></script>
   <script src="https://unpkg.com/htmx.org@2.0.0"></script>
   <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="stylesheet" href="static/css/main.css">
-  <link rel="stylesheet" href="static/css/mobile.css">
-  <link rel="stylesheet" href="static/css/animations.css">
   <link rel="manifest" href="manifest.json">
 </head>
-<body x-data="homeApp()" class="bg-gradient-to-br from-indigo-50 to-purple-50 min-h-screen">
+<body x-data="homeApp()" class="bg-gradient-to-br from-gray-50 to-blue-50 min-h-screen">
   <!-- Top Bar -->
-  <header class="bg-white shadow-sm sticky top-0 z-50 p-4 flex items-center justify-between">
-    <h1 class="text-xl font-bold text-gray-900">Soccho</h1>
-    <div class="flex items-center gap-4">
-      <button @click="toggleDrawer()" class="relative p-2 rounded-xl hover:bg-gray-100 transition-all">
-        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-          <path d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"/>
-        </svg>
-        <span x-show="notificationCount > 0" x-text="notificationCount" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">0</span>
-      </button>
-      <div class="w-10 h-10 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg">
-        <span class="text-white font-semibold">AB</span>
+  <header class="bg-white shadow-sm sticky top-0 z-50 p-4">
+    <div class="flex items-center justify-between max-w-6xl mx-auto">
+      <h1 class="text-2xl font-bold text-gray-900">Soccho</h1>
+      <div class="flex items-center gap-4">
+        <button @click="toggleDrawer()" class="relative p-2 rounded-lg hover:bg-gray-100 transition-all" title="Notifications">
+          <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+          </svg>
+          <span x-show="notificationCount > 0" x-text="notificationCount" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">0</span>
+        </button>
+        <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white flex items-center justify-center shadow-lg font-bold cursor-pointer" title="Profile">
+          <span id="user-initial">?</span>
+        </div>
       </div>
     </div>
   </header>
 
   <!-- Notification Drawer -->
-  <div x-show="drawerOpen" x-transition:enter="drawer-enter" x-transition:enter-start="notification-drawer" class="notification-drawer">
-    <div class="p-4 border-b">
-      <div class="flex items-center justify-between">
-        <h2 class="text-lg font-bold">Notifications</h2>
-        <button @click="toggleDrawer()" class="p-2 rounded-xl hover:bg-gray-100">×</button>
+  <div x-show="drawerOpen" x-transition class="fixed inset-0 z-40">
+    <div class="absolute inset-y-0 right-0 w-full max-w-sm bg-white shadow-lg rounded-l-2xl flex flex-col">
+      <div class="p-4 border-b flex items-center justify-between">
+        <h2 class="text-lg font-bold text-gray-900">Notifications</h2>
+        <button @click="toggleDrawer()" class="p-2 rounded-lg hover:bg-gray-100 text-2xl leading-none text-gray-600">×</button>
+      </div>
+      <div id="notifications-list" class="p-4 space-y-4 overflow-y-auto flex-1">
+        <p class="text-gray-500 text-center py-8">No new notifications</p>
       </div>
     </div>
-    <div id="notifications-list" class="p-4 space-y-4 overflow-y-auto h-[calc(100vh-120px)]">
-      <!-- Notifications load here via HTMX -->
-    </div>
+    <div class="absolute inset-0 bg-black bg-opacity-50" @click="toggleDrawer()"></div>
   </div>
 
-  <!-- Backdrop -->
-  <div x-show="drawerOpen" x-transition class="backdrop" @click="toggleDrawer()"></div>
-
   <!-- Main Content -->
-  <main class="container mx-auto p-4 pt-20 pb-20">
-    <!-- Charts Section -->
+  <main class="max-w-6xl mx-auto p-4 pt-20 pb-24">
+    <!-- Summary Section -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-      <div class="card p-6">
-        <h3 class="text-lg font-semibold mb-4">Monthly Summary</h3>
-        <canvas id="monthlyChart" height="200"></canvas>
+      <!-- Net Balance Card -->
+      <div class="card p-8 text-center">
+        <h3 class="text-gray-600 text-sm font-semibold mb-2">TOTAL NET BALANCE</h3>
+        <div class="text-5xl font-bold mb-3">
+          <span id="netBalance" class="text-green-600">$0.00</span>
+        </div>
+        <p class="text-gray-500 text-sm">Total owed to you across all friends</p>
       </div>
-      <div class="card p-6">
-        <h3 class="text-lg font-semibold mb-4">Net Balance</h3>
-        <div class="text-4xl font-bold text-center text-green-600" id="netBalance">$0</div>
-        <p class="text-center text-muted text-sm mt-2">Total owed to you</p>
+
+      <!-- Summary Stats -->
+      <div class="card p-8">
+        <h3 class="text-lg font-bold text-gray-900 mb-6">Quick Stats</h3>
+        <div class="space-y-4">
+          <div class="flex justify-between items-center">
+            <span class="text-gray-600">You Gave:</span>
+            <span id="total-given" class="text-lg font-semibold text-gray-900">$0.00</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-gray-600">You Lent:</span>
+            <span id="total-lent" class="text-lg font-semibold text-gray-900">$0.00</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-gray-600">You Owe:</span>
+            <span id="total-owed" class="text-lg font-semibold text-gray-900">$0.00</span>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- Friends List -->
+    <!-- Friends Section -->
     <div class="card p-6">
       <div class="flex items-center justify-between mb-6">
-        <h3 class="text-xl font-bold">Friends</h3>
-        <a href="find-friends.html" class="text-accent font-semibold hover:underline">Find Friends →</a>
+        <h3 class="text-xl font-bold text-gray-900">Your Friends</h3>
+        <a href="find-friends.html" class="text-blue-600 font-semibold hover:text-blue-700 text-sm">Find Friends →</a>
       </div>
-      <div id="friends-list" class="space-y-4">
-        <!-- Friends load here -->
-        <div class="skeleton h-16 rounded-xl"></div>
-        <div class="skeleton h-16 rounded-xl"></div>
+      <div id="friends-list" class="space-y-3">
+        <div class="skeleton h-20 rounded-lg"></div>
+        <div class="skeleton h-20 rounded-lg"></div>
+        <div class="skeleton h-20 rounded-lg"></div>
       </div>
     </div>
   </main>
 
   <!-- Mobile Bottom Nav -->
-  <nav class="bottom-nav">
-    <a href="home.html" class="flex flex-col items-center p-2 text-accent">
-      <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+  <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around md:hidden">
+    <a href="home.html" class="flex-1 flex flex-col items-center p-3 text-blue-600 font-semibold">
+      <svg class="w-6 h-6 mb-1" fill="currentColor" viewBox="0 0 20 20">
         <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/>
       </svg>
-      <span class="text-xs mt-1">Home</span>
+      <span class="text-xs">Home</span>
     </a>
-    <a href="find-friends.html" class="flex flex-col items-center p-2 text-gray-500">
-      <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-        <path d="M9 9a2 2 0 114 0 2 2 0 01-4 0z"/>
-        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a4 4 0 00-3.446 6.032l-1.261 1.26a4 4 0 103.69 6.415 4 4 0 00.611-6.976l1.262-1.26a4 4 0 10-3.69-6.415l1.261-1.261A4 4 0 1011 5z"/>
+    <a href="find-friends.html" class="flex-1 flex flex-col items-center p-3 text-gray-500 hover:text-gray-700">
+      <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4a4 4 0 110 8 4 4 0 010-8zm0 12c-5 0-8 2.5-8 5v3h16v-3c0-2.5-3-5-8-5z"/>
       </svg>
-      <span class="text-xs mt-1">Friends</span>
+      <span class="text-xs">Find Friends</span>
     </a>
-    <a href="profile.html" class="flex flex-col items-center p-2 text-gray-500">
-      <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+    <a href="profile.html" class="flex-1 flex flex-col items-center p-3 text-gray-500 hover:text-gray-700">
+      <svg class="w-6 h-6 mb-1" fill="currentColor" viewBox="0 0 20 20">
         <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z"/>
       </svg>
-      <span class="text-xs mt-1">Profile</span>
+      <span class="text-xs">Profile</span>
     </a>
   </nav>
 
@@ -107,33 +125,27 @@
           this.drawerOpen = !this.drawerOpen;
         },
         init() {
-          // Load notifications and friends from gateway routes.
-          fetch('/notifications/unread-count')
-            .then((r) => r.json())
-            .then((data) => {
+          // Load notifications from gateway
+          apiCall('GET', '/notifications/unread-count')
+            .then(r => r.json())
+            .then(data => {
               this.notificationCount = Number(data.count || 0);
             })
-            .catch(() => {});
+            .catch(err => console.error('Error loading notifications:', err));
 
+          // Load friends list
           htmx.ajax('GET', '/social/friends', {target: '#friends-list', swap: 'innerHTML'});
           
-          // Charts
-          const ctx = document.getElementById('monthlyChart').getContext('2d');
-          new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-              labels: ['Given', 'Lent', 'Received'],
-              datasets: [{
-                data: [300, 150, 450],
-                backgroundColor: ['#059669', '#DC2626', '#10B981']
-              }]
-            },
-            options: {
-              responsive: true,
-              maintainAspectRatio: false,
-              plugins: { legend: { position: 'bottom' } }
-            }
-          });
+          // Load stats
+          apiCall('GET', '/transactions/stats')
+            .then(r => r.json())
+            .then(data => {
+              document.getElementById('total-given').textContent = '$' + (data.total_given || 0).toFixed(2);
+              document.getElementById('total-lent').textContent = '$' + (data.total_lent || 0).toFixed(2);
+              document.getElementById('total-owed').textContent = '$' + (data.total_owed || 0).toFixed(2);
+              document.getElementById('netBalance').textContent = '$' + (data.net_balance || 0).toFixed(2);
+            })
+            .catch(err => console.error('Error loading stats:', err));
         }
       }
     }

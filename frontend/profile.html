@@ -3,38 +3,120 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Your Soccho profile and account settings">
   <title>Profile - Soccho</title>
   <script src="config.js"></script>
+  <script src="static/js/error-handler.js"></script>
   <script src="https://unpkg.com/htmx.org@2.0.0"></script>
   <link rel="stylesheet" href="static/css/main.css">
-  <link rel="stylesheet" href="static/css/mobile.css">
 </head>
 <body class="bg-gradient-to-br from-gray-50 to-blue-50 min-h-screen">
   <header class="bg-white shadow-sm sticky top-0 z-50 p-4">
-    <h1 class="text-xl font-bold">Profile</h1>
+    <div class="max-w-2xl mx-auto flex items-center gap-4">
+      <a href="home.html" class="p-2 rounded-lg hover:bg-gray-100">
+        <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+      </a>
+      <h1 class="text-xl font-bold text-gray-900">Profile</h1>
+    </div>
   </header>
 
-  <main class="container mx-auto p-4 pt-20 pb-20">
+  <main class="max-w-2xl mx-auto p-4 pt-20 pb-24">
+    <!-- Profile Card -->
     <section class="card p-6 mb-6">
-      <div class="flex items-center gap-4">
-        <div class="w-16 h-16 rounded-full bg-primary text-white flex items-center justify-center text-xl font-bold">U</div>
-        <div>
-          <h2 class="text-lg font-semibold">Your Account</h2>
-          <p class="text-muted">Account and security overview</p>
+      <div class="flex items-center gap-6 mb-6">
+        <div class="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white flex items-center justify-center text-4xl font-bold shadow-lg">
+          <span id="user-initial">?</span>
+        </div>
+        <div class="flex-1">
+          <h2 id="user-name" class="text-2xl font-bold text-gray-900">Loading...</h2>
+          <p id="user-email" class="text-gray-600 text-sm mt-1">loading@example.com</p>
+          <div class="mt-4 text-sm">
+            <p class="text-gray-600">Loyalty Score: <span id="loyalty-score" class="font-bold text-gray-900">--</span></p>
+          </div>
         </div>
       </div>
     </section>
 
+    <!-- Account Settings -->
     <section class="card p-6 mb-6">
-      <h3 class="text-lg font-semibold mb-4">Security</h3>
-      <button class="btn-secondary w-full mb-3">Change Password</button>
-      <button class="btn-secondary w-full">Manage Sessions</button>
+      <h3 class="text-lg font-bold text-gray-900 mb-4">Security</h3>
+      <div class="space-y-3">
+        <button class="btn-secondary w-full py-3 font-semibold text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">
+          Change Password
+        </button>
+        <button class="btn-secondary w-full py-3 font-semibold text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">
+          Manage Sessions
+        </button>
+        <button class="btn-secondary w-full py-3 font-semibold text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50">
+          Two-Factor Authentication
+        </button>
+      </div>
     </section>
 
-    <section class="card p-6">
-      <h3 class="text-lg font-semibold mb-4">Stats</h3>
-      <div id="profile-stats" hx-get="/social/friends" hx-trigger="load" class="text-muted">Loading stats...</div>
+    <!-- Account Stats -->
+    <section class="card p-6 mb-6">
+      <h3 class="text-lg font-bold text-gray-900 mb-6">Account Stats</h3>
+      <div id="profile-stats" class="grid grid-cols-2 gap-4" hx-get="/social/stats" hx-trigger="load">
+        <div class="text-center">
+          <p class="text-3xl font-bold text-gray-900">--</p>
+          <p class="text-sm text-gray-600 mt-1">Friends</p>
+        </div>
+        <div class="text-center">
+          <p class="text-3xl font-bold text-gray-900">--</p>
+          <p class="text-sm text-gray-600 mt-1">Transactions</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Danger Zone -->
+    <section class="card p-6 border-2 border-red-200">
+      <h3 class="text-lg font-bold text-red-600 mb-4">Danger Zone</h3>
+      <p class="text-gray-600 text-sm mb-4">Once you delete your account, there is no going back. Please be certain.</p>
+      <button class="w-full py-3 font-semibold text-white bg-red-600 border border-red-700 rounded-lg hover:bg-red-700">
+        Delete Account Permanently
+      </button>
     </section>
   </main>
+
+  <!-- Mobile Bottom Nav -->
+  <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around md:hidden">
+    <a href="home.html" class="flex-1 flex flex-col items-center p-3 text-gray-500 hover:text-gray-700">
+      <svg class="w-6 h-6 mb-1" fill="currentColor" viewBox="0 0 20 20">
+        <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/>
+      </svg>
+      <span class="text-xs">Home</span>
+    </a>
+    <a href="find-friends.html" class="flex-1 flex flex-col items-center p-3 text-gray-500 hover:text-gray-700">
+      <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4a4 4 0 110 8 4 4 0 010-8zm0 12c-5 0-8 2.5-8 5v3h16v-3c0-2.5-3-5-8-5z"/>
+      </svg>
+      <span class="text-xs">Find Friends</span>
+    </a>
+    <a href="profile.html" class="flex-1 flex flex-col items-center p-3 text-blue-600 font-semibold">
+      <svg class="w-6 h-6 mb-1" fill="currentColor" viewBox="0 0 20 20">
+        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z"/>
+      </svg>
+      <span class="text-xs">Profile</span>
+    </a>
+  </nav>
+
+  <script>
+    // Load user profile on page load
+    document.addEventListener('DOMContentLoaded', async () => {
+      try {
+        const response = await apiCall('GET', '/auth/profile');
+        const user = await response.json();
+        
+        document.getElementById('user-name').textContent = user.username || 'User';
+        document.getElementById('user-email').textContent = user.email || 'email@example.com';
+        document.getElementById('user-initial').textContent = (user.username || 'U')[0].toUpperCase();
+        document.getElementById('loyalty-score').textContent = (user.loyalty_score || 0).toFixed(2);
+      } catch (error) {
+        console.error('Error loading profile:', error);
+      }
+    });
+  </script>
 </body>
 </html>

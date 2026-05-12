@@ -3,69 +3,100 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Track money and transactions with a friend on Soccho">
   <title>Friendship - Soccho</title>
   <script src="config.js"></script>
+  <script src="static/js/error-handler.js"></script>
   <script src="https://unpkg.com/htmx.org@2.0.0"></script>
   <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="stylesheet" href="static/css/main.css">
 </head>
 <body x-data="{ friendId: window.location.pathname.split('/').pop(), netBalance: 0 }" class="bg-gray-50 min-h-screen">
-  <header class="bg-white shadow-sm sticky top-0 p-4">
-    <div class="flex items-center gap-4">
-      <a href="home.html">
-        <svg class="w-8 h-8 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  <header class="bg-white shadow-sm sticky top-0 z-50 p-4">
+    <div class="flex items-center gap-4 max-w-2xl mx-auto">
+      <a href="home.html" class="p-2 rounded-lg hover:bg-gray-100">
+        <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
         </svg>
       </a>
       <div class="flex-1">
-        <h1 id="friend-name" class="text-2xl font-bold">Loading...</h1>
-        <div id="loyalty-score" class="text-sm text-muted">Loyalty: --</div>
+        <h1 id="friend-name" class="text-xl font-bold text-gray-900">Loading...</h1>
+        <div id="loyalty-score" class="text-xs text-gray-500">Loyalty: calculating...</div>
       </div>
+      <button class="p-2 rounded-lg hover:bg-gray-100">
+        <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/>
+        </svg>
+      </button>
     </div>
   </header>
 
-  <main class="container mx-auto p-4 pt-20 pb-20">
+  <main class="max-w-2xl mx-auto p-4 pt-20 pb-20">
     <!-- Net Balance Card -->
     <div class="card p-8 text-center mb-8">
-      <div id="friend-avatar" class="avatar mx-auto mb-4 border-4 border-accent shadow-lg"></div>
-      <div class="balance-chip balance-positive text-3xl font-bold mb-2" id="net-balance-chip">+$0</div>
-      <p class="text-muted">Net balance with this friend</p>
+      <div class="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white flex items-center justify-center text-3xl font-bold shadow-lg" id="friend-avatar">?</div>
+      <div id="net-balance-chip" class="text-5xl font-bold mb-2 text-green-600">+$0</div>
+      <p class="text-gray-600 text-sm">Net balance with this friend</p>
+      <p class="text-gray-500 text-xs mt-2" id="balance-note">They owe you</p>
     </div>
 
-    <!-- Give Money Form -->
+    <!-- Send Money Form -->
     <div class="card p-6 mb-8">
-      <h3 class="text-xl font-bold mb-6">Send Money</h3>
-      <form hx-post="/transactions/create" hx-target="#transaction-result" class="space-y-4">
+      <h3 class="text-xl font-bold mb-6 text-gray-900">Record a Transaction</h3>
+      <form hx-post="/transactions/create" hx-target="#transaction-result" hx-swap="innerHTML" class="space-y-6">
         <input type="hidden" name="friend_id" :value="friendId">
+        
         <div>
-          <label class="block text-sm font-medium mb-2">Amount ($)</label>
-          <input type="number" name="amount" step="0.01" min="0.01" required class="w-full input-field text-2xl text-right">
+          <label class="block text-sm font-semibold text-gray-700 mb-2">Amount ($)</label>
+          <input type="number" name="amount" step="0.01" min="0.01" placeholder="0.00" class="input-field text-2xl text-center" required>
         </div>
+        
         <div>
-          <label class="block text-sm font-medium mb-2">Due Date (optional)</label>
-          <input type="date" name="due_date" class="w-full input-field">
+          <label class="block text-sm font-semibold text-gray-700 mb-2">Type</label>
+          <div class="grid grid-cols-2 gap-3">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="radio" name="transaction_type" value="give" checked>
+              <span>I gave money</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="radio" name="transaction_type" value="lend">
+              <span>I lent money</span>
+            </label>
+          </div>
         </div>
-        <button type="submit" class="w-full btn-primary py-4 text-lg">Send Request</button>
+        
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-2">Description (optional)</label>
+          <input type="text" name="description" placeholder="e.g., Lunch, Gas, Concert tickets" class="input-field">
+        </div>
+        
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-2">Due Date (optional)</label>
+          <input type="date" name="due_date" class="input-field">
+        </div>
+        
+        <button type="submit" class="btn-primary w-full py-3 text-lg font-semibold">Record Transaction</button>
       </form>
-      <div id="transaction-result"></div>
+      <div id="transaction-result" class="mt-4"></div>
     </div>
 
     <!-- Recent Transactions -->
     <div class="card p-6">
-      <h3 class="text-xl font-bold mb-6">Recent Transactions</h3>
+      <h3 class="text-xl font-bold mb-6 text-gray-900">Transaction History</h3>
       <div id="transactions-list" class="space-y-4">
-        <div class="skeleton h-16 rounded-xl"></div>
-        <div class="skeleton h-16 rounded-xl"></div>
+        <div class="skeleton h-20 rounded-lg"></div>
+        <div class="skeleton h-20 rounded-lg"></div>
+        <div class="skeleton h-20 rounded-lg"></div>
       </div>
     </div>
   </main>
 
   <script>
     htmx.onLoad(() => {
+      const friendId = document.querySelector('[x-data]').__x.$data.friendId;
       // Load transaction-driven friendship data
-      htmx.ajax('GET', `/transactions/balance/${friendId}`, {target: '#net-balance-chip'});
-      htmx.ajax('GET', `/transactions/list/${friendId}`, {target: '#transactions-list'});
+      htmx.ajax('GET', `/transactions/balance/${friendId}`, {target: '#net-balance-chip', swap: 'innerHTML'});
+      htmx.ajax('GET', `/transactions/list/${friendId}`, {target: '#transactions-list', swap: 'innerHTML'});
     });
   </script>
 </body>

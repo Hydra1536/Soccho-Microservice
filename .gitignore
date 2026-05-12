@@ -86,7 +86,7 @@ Thumbs.db
 .vscode/settings.json
 .idea/workspace.xml
 .idea/misc.xml
-
+config.toml
 # Generated files
 **/migrations/*_*.py
 **/staticfiles/
